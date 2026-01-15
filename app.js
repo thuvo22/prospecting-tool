@@ -145,6 +145,29 @@ async function getPlaceDetails(placeId) {
     return await apiCall(`/prospecting/place-details/${placeId}`);
 }
 
+async function fetchProspectingStats() {
+    return await apiCall('/prospecting/prospecting-stats');
+}
+
+async function fetchSavedCompanies(companyType = null, enriched = null, limit = 100, skip = 0) {
+    let url = `/prospecting/saved-companies?limit=${limit}&skip=${skip}`;
+    if (companyType) url += `&companyType=${encodeURIComponent(companyType)}`;
+    if (enriched !== null) url += `&enriched=${enriched}`;
+    return await apiCall(url);
+}
+
+async function updateDbStats() {
+    try {
+        const result = await fetchProspectingStats();
+        if (result.ok) {
+            document.getElementById('dbTotalCompanies').textContent = result.totalCompanies || 0;
+            document.getElementById('dbEnrichedCompanies').textContent = result.enrichedCompanies || 0;
+        }
+    } catch (e) {
+        console.error('Failed to fetch stats:', e);
+    }
+}
+
 // ==================== UI FUNCTIONS ====================
 function showLoginScreen() {
     document.getElementById('loginScreen').classList.remove('d-none');
@@ -595,6 +618,53 @@ document.getElementById('selectAll').addEventListener('change', (e) => {
     });
 });
 
+// Load saved companies button
+document.getElementById('loadSavedBtn').addEventListener('click', async () => {
+    const companyType = document.getElementById('companyType').value;
+    
+    try {
+        setProgress(50, 'Loading saved companies...');
+        const result = await fetchSavedCompanies(companyType, null, 200);
+        
+        if (result.ok && result.companies) {
+            // Convert to display format
+            state.companies = result.companies.map(c => ({
+                placeId: c.placeId,
+                name: c.companyName,
+                address: c.address,
+                rating: c.rating,
+                reviewCount: c.reviewCount,
+                website: c.website,
+                phone: c.phone,
+                enriched: c.enriched || false,
+                contacts: c.contacts || [],
+                employeeCount: c.employeeCount,
+                domain: c.domain,
+                fromDatabase: true,
+            }));
+            
+            // Add to fetched set
+            result.companies.forEach(c => state.fetchedPlaceIds.add(c.placeId));
+            
+            state.stats.companies = state.companies.length;
+            updateStats();
+            renderResultsTable();
+            
+            document.getElementById('enrichAllBtn').classList.toggle('d-none', state.companies.length === 0);
+            document.getElementById('exportBtn').classList.toggle('d-none', state.companies.length === 0);
+            
+            alert(`Loaded ${state.companies.length} saved companies`);
+        }
+    } catch (err) {
+        showError('Failed to load saved companies: ' + err.message);
+    } finally {
+        setProgress(null);
+    }
+});
+
+// Refresh stats button
+document.getElementById('refreshStatsBtn').addEventListener('click', updateDbStats);
+
 // ==================== INIT ====================
 (async function init() {
     // Check for saved token
@@ -604,7 +674,7 @@ document.getElementById('selectAll').addEventListener('change', (e) => {
         state.isLoggedIn = true;
         showAppScreen();
         
-        // Load cities
+        // Load cities and stats
         try {
             const cities = await fetchCities();
             const citySelect = document.getElementById('citySelect');
@@ -615,6 +685,9 @@ document.getElementById('selectAll').addEventListener('change', (e) => {
                 option.dataset.city = JSON.stringify(city);
                 citySelect.appendChild(option);
             });
+            
+            // Load database stats
+            await updateDbStats();
         } catch (err) {
             console.error('Failed to load cities:', err);
             logout();
