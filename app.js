@@ -133,6 +133,7 @@ async function searchCompanies(cities, companyType, minReviews, maxReviews, maxR
     if (maxReviews) {
         payload.maxReviews = maxReviews;
     }
+    console.log('Sending search payload:', payload);
     return await apiCall('/prospecting/search-companies', 'POST', payload);
 }
 
