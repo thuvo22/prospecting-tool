@@ -100,8 +100,8 @@ async function login(username, password) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            email: 'admin@onpointprostx.com',
-            password: password
+            email: 'you@onpointpros.com',
+            password: 'pass123'
         })
     });
     
