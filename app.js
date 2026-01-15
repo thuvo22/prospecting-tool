@@ -95,24 +95,23 @@ async function login(username, password) {
         throw new Error('Invalid credentials');
     }
     
-    // Now get real API token
-    const formData = new URLSearchParams();
-    formData.append('username', 'admin@onpointprostx.com');
-    formData.append('password', password);
-    
+    // Now get real API token - send as JSON
     const response = await fetch(`${CONFIG.API_BASE}/auth/login`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: 'admin@onpointprostx.com',
+            password: password
+        })
     });
     
     const data = await response.json();
     
-    if (!response.ok || !data.access_token) {
+    if (!response.ok || !data.token) {
         throw new Error(data.detail || 'Login failed');
     }
     
-    return data.access_token;
+    return data.token;
 }
 
 async function fetchCities() {
