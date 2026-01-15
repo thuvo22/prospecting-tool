@@ -323,14 +323,21 @@ function renderResults() {
 }
 
 async function enrichSingleCompany(index) {
+    const result = await enrichSingleCompanyWithTracking(index);
+    return result;
+}
+
+async function enrichSingleCompanyWithTracking(index) {
     const company = state.companies[index];
-    if (company.enriched) return;
+    if (company.enriched) return { cached: true };
     
     const btn = document.querySelector(`.enrich-btn[data-index="${index}"]`);
     if (btn) {
         btn.innerHTML = '<span class="loading-spinner"></span>';
         btn.disabled = true;
     }
+    
+    let wasCached = false;
     
     try {
         // First get place details if we don't have website
@@ -352,6 +359,7 @@ async function enrichSingleCompany(index) {
             company.contacts = result.contacts;
             company.employeeCount = result.employeeCount;
             company.domain = result.domain || company.domain;
+            wasCached = result.cached || false;
             
             // Update stats
             state.stats.contacts += result.contacts?.length || 0;
@@ -366,6 +374,7 @@ async function enrichSingleCompany(index) {
     }
     
     renderResults();
+    return { cached: wasCached };
 }
 
 async function enrichAllCompanies() {
@@ -375,23 +384,36 @@ async function enrichAllCompanies() {
     state.isEnriching = true;
     document.getElementById('enrichAllBtn').disabled = true;
     
+    let cachedCount = 0;
+    let newCount = 0;
+    
     for (let i = 0; i < state.companies.length; i++) {
         if (state.companies[i].enriched) continue;
         
         setProgress(
             ((i + 1) / state.companies.length) * 100,
-            `Enriching ${i + 1} of ${state.companies.length}...`
+            `Enriching ${i + 1} of ${state.companies.length}... (${cachedCount} cached, ${newCount} new API calls)`
         );
         
-        await enrichSingleCompany(i);
+        const result = await enrichSingleCompanyWithTracking(i);
+        if (result?.cached) {
+            cachedCount++;
+        } else {
+            newCount++;
+        }
         
-        // Small delay to respect rate limits
-        await new Promise(r => setTimeout(r, 500));
+        // Small delay to respect rate limits (skip if cached)
+        if (!result?.cached) {
+            await new Promise(r => setTimeout(r, 500));
+        }
     }
     
-    setProgress(null);
+    setProgress(100, `Done! ${cachedCount} from cache, ${newCount} new API calls`);
+    setTimeout(() => setProgress(null), 3000);
+    
     state.isEnriching = false;
     document.getElementById('enrichAllBtn').disabled = false;
+    await updateDbStats();
     renderResults();
 }
 
@@ -544,8 +566,16 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
             state.stats.companies = state.companies.length;
             updateStats();
             
-            setProgress(100, `Found ${result.returnedCount} companies`);
-            setTimeout(() => setProgress(null), 1500);
+            // Show detailed stats
+            const newCount = result.savedCount || result.returnedCount;
+            const existingCount = result.skippedExisting || 0;
+            const msg = `Found ${result.returnedCount} new companies (${existingCount} already in DB)`;
+            setProgress(100, msg);
+            
+            // Update database stats
+            await updateDbStats();
+            
+            setTimeout(() => setProgress(null), 2500);
         } else {
             showError(result.error || 'Search failed');
             setProgress(null);
@@ -591,8 +621,10 @@ document.getElementById('loadMoreBtn').addEventListener('click', async () => {
             state.stats.companies = state.companies.length;
             updateStats();
             
-            setProgress(100, `Loaded ${result.returnedCount} more`);
-            setTimeout(() => setProgress(null), 1500);
+            const existingCount = result.skippedExisting || 0;
+            setProgress(100, `Loaded ${result.returnedCount} new (${existingCount} in DB)`);
+            await updateDbStats();
+            setTimeout(() => setProgress(null), 2500);
         } else {
             setProgress(100, 'No more results');
             setTimeout(() => setProgress(null), 1500);
