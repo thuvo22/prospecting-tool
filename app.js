@@ -9,7 +9,7 @@ const CONFIG = {
     // Simple client-side auth (not secure, just for personal use)
     VALID_CREDS: {
         username: 'thuvo',
-        passwordHash: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918' // SHA-256 of password
+        passwordHash: '116bfe0b8eb0c9192ac020ed04c1d670c498a3849c160d733e44c9a6e394b7d8' // SHA-256 of password
     }
 };
 
