@@ -21,177 +21,74 @@
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
         
-        .login-container {
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+        .login-container { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); width: 100%; max-width: 400px; }
+        .app-container { background: #f8fafc; min-height: 100vh; }
+        .navbar-brand { font-weight: 700; color: var(--primary-color) !important; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+        .card-header { background: white; border-bottom: 1px solid #e5e7eb; font-weight: 600; }
+        .btn-primary { background: var(--primary-color); border-color: var(--primary-color); }
+        .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
         
-        .login-card {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            width: 100%;
-            max-width: 400px;
-        }
+        .city-tag { display: inline-flex; align-items: center; background: #e0e7ff; color: #3730a3; padding: 4px 12px; border-radius: 20px; font-size: 0.875rem; margin: 2px; }
+        .city-tag .remove { margin-left: 6px; cursor: pointer; opacity: 0.7; }
+        .city-tag .remove:hover { opacity: 1; }
         
-        .app-container {
-            background: #f8fafc;
-            min-height: 100vh;
-        }
+        .results-table { font-size: 0.875rem; }
+        .results-table th { background: #f8fafc; font-weight: 600; white-space: nowrap; }
+        .results-table td { vertical-align: middle; }
         
-        .navbar-brand {
-            font-weight: 700;
-            color: var(--primary-color) !important;
-        }
-        
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-        
-        .card-header {
-            background: white;
-            border-bottom: 1px solid #e5e7eb;
-            font-weight: 600;
-        }
-        
-        .btn-primary {
-            background: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        
-        .btn-primary:hover {
-            background: var(--primary-hover);
-            border-color: var(--primary-hover);
-        }
-        
-        .city-tag {
-            display: inline-flex;
-            align-items: center;
-            background: #e0e7ff;
-            color: #3730a3;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.875rem;
-            margin: 2px;
-        }
-        
-        .city-tag .remove {
-            margin-left: 6px;
-            cursor: pointer;
-            opacity: 0.7;
-        }
-        
-        .city-tag .remove:hover {
-            opacity: 1;
-        }
-        
-        .results-table {
-            font-size: 0.875rem;
-        }
-        
-        .results-table th {
-            background: #f8fafc;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        
-        .results-table td {
-            vertical-align: middle;
-        }
-        
-        .status-badge {
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
-        }
-        
+        .status-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 500; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-enriched { background: #d1fae5; color: #065f46; }
         .status-no-contact { background: #fee2e2; color: #991b1b; }
         
-        .contact-info {
-            font-size: 0.8rem;
-        }
-        
+        .contact-info { font-size: 0.8rem; }
         .contact-info .email { color: var(--primary-color); }
         .contact-info .phone { color: #059669; }
+        .contact-info .invalid { color: #dc2626; text-decoration: line-through; opacity: 0.6; }
         
-        .progress-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 9999;
-        }
+        .stats-card .number { font-size: 2rem; font-weight: 700; color: var(--primary-color); }
+        .stats-card .label { font-size: 0.875rem; color: #6b7280; }
         
-        .stats-card {
-            text-align: center;
-            padding: 20px;
-        }
+        .company-row.enriched { background: #f0fdf4; }
+        .company-row.no-contact { background: #fef2f2; }
         
-        .stats-card .number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
+        .loading-spinner { width: 16px; height: 16px; border: 2px solid #e5e7eb; border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         
-        .stats-card .label {
-            font-size: 0.875rem;
-            color: #6b7280;
-        }
-        
-        #searchProgress {
-            display: none;
-        }
-        
-        #searchProgress.active {
-            display: block;
-        }
-        
-        .company-row.enriched {
-            background: #f0fdf4;
-        }
-        
-        .company-row.no-contact {
-            background: #fef2f2;
-        }
-        
-        .loading-spinner {
-            width: 16px;
-            height: 16px;
-            border: 2px solid #e5e7eb;
-            border-top-color: var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        .employee-badge {
-            background: #f3f4f6;
-            color: #374151;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-        }
-        
-        .source-badge {
-            font-size: 0.65rem;
-            padding: 1px 6px;
-            border-radius: 4px;
-        }
-        
+        .employee-badge { background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+        .source-badge { font-size: 0.65rem; padding: 1px 6px; border-radius: 4px; }
         .source-apollo { background: #dbeafe; color: #1e40af; }
         .source-scrape { background: #fef3c7; color: #92400e; }
         .source-google { background: #d1fae5; color: #065f46; }
+        
+        /* Step Progress */
+        .step-progress { position: fixed; top: 56px; left: 0; right: 0; z-index: 9999; background: white; border-bottom: 1px solid #e5e7eb; padding: 15px 20px; display: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .step-progress.active { display: block; }
+        .step-item { display: inline-flex; align-items: center; margin-right: 25px; padding: 6px 12px; border-radius: 8px; background: #f3f4f6; }
+        .step-item.step-active { background: #dbeafe; }
+        .step-item.step-done { background: #d1fae5; }
+        .step-item.step-error { background: #fee2e2; }
+        .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px; font-size: 14px; }
+        .step-pending .step-icon { background: #e5e7eb; color: #6b7280; }
+        .step-active .step-icon { background: #3b82f6; color: white; }
+        .step-done .step-icon { background: #10b981; color: white; }
+        .step-error .step-icon { background: #ef4444; color: white; }
+        .step-label { font-weight: 500; font-size: 0.875rem; }
+        .step-detail { font-size: 0.7rem; color: #6b7280; }
+        
+        /* Nav Tabs */
+        .nav-tabs .nav-link { color: #6b7280; border: none; padding: 12px 20px; }
+        .nav-tabs .nav-link.active { color: var(--primary-color); background: transparent; border-bottom: 3px solid var(--primary-color); font-weight: 600; }
+        .nav-tabs .nav-link:hover:not(.active) { color: var(--primary-color); border: none; }
+        
+        .filter-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .filter-bar .form-control, .filter-bar .form-select { font-size: 0.875rem; }
+        
+        .valid-badge { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
+        .valid-yes { background: #d1fae5; color: #065f46; }
+        .valid-no { background: #fee2e2; color: #991b1b; }
     </style>
 </head>
 <body>
@@ -225,171 +122,251 @@
         <!-- Navbar -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
             <div class="container-fluid">
-                <a class="navbar-brand" href="#">
-                    <i class="bi bi-search-heart me-2"></i>OnPoint Prospecting
-                </a>
+                <a class="navbar-brand" href="#"><i class="bi bi-search-heart me-2"></i>OnPoint Prospecting</a>
                 <div class="d-flex align-items-center">
                     <span class="text-muted me-3" id="userDisplay"></span>
-                    <button class="btn btn-outline-secondary btn-sm" id="logoutBtn">
-                        <i class="bi bi-box-arrow-right"></i> Logout
-                    </button>
+                    <button class="btn btn-outline-secondary btn-sm" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</button>
                 </div>
             </div>
         </nav>
-
-        <!-- Progress Bar -->
-        <div id="searchProgress" class="progress-container">
-            <div class="progress" style="height: 4px; border-radius: 0;">
-                <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%"></div>
+        
+        <!-- Step Progress Indicator -->
+        <div id="stepProgress" class="step-progress">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <strong id="stepTitle">Processing...</strong>
+                    <small id="stepOverall" class="text-muted"></small>
+                </div>
+                <div class="progress mb-3" style="height: 6px;">
+                    <div id="stepProgressBar" class="progress-bar bg-primary" style="width: 0%"></div>
+                </div>
+                <div id="stepDetails" class="d-flex flex-wrap">
+                    <div class="step-item step-pending" data-step="places">
+                        <div class="step-icon"><i class="bi bi-geo-alt"></i></div>
+                        <div>
+                            <div class="step-label">Google Places</div>
+                            <div class="step-detail" id="stepPlacesDetail">Waiting...</div>
+                        </div>
+                    </div>
+                    <div class="step-item step-pending" data-step="apollo">
+                        <div class="step-icon"><i class="bi bi-person-badge"></i></div>
+                        <div>
+                            <div class="step-label">Apollo</div>
+                            <div class="step-detail" id="stepApolloDetail">Waiting...</div>
+                        </div>
+                    </div>
+                    <div class="step-item step-pending" data-step="scraper">
+                        <div class="step-icon"><i class="bi bi-globe"></i></div>
+                        <div>
+                            <div class="step-label">Web Scraper</div>
+                            <div class="step-detail" id="stepScraperDetail">Waiting...</div>
+                        </div>
+                    </div>
+                    <div class="step-item step-pending" data-step="hunter">
+                        <div class="step-icon"><i class="bi bi-shield-check"></i></div>
+                        <div>
+                            <div class="step-label">Hunter</div>
+                            <div class="step-detail" id="stepHunterDetail">Waiting...</div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="bg-primary text-white text-center py-2" id="progressText">Searching...</div>
         </div>
 
-        <!-- Main Content -->
-        <div class="container-fluid py-4">
-            <div class="row">
-                <!-- Search Panel -->
-                <div class="col-lg-3 mb-4">
-                    <div class="card">
-                        <div class="card-header">
-                            <i class="bi bi-funnel me-2"></i>Search Filters
+        <!-- Tabs -->
+        <div class="bg-white border-bottom">
+            <div class="container-fluid">
+                <ul class="nav nav-tabs" id="mainTabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#searchTab">
+                            <i class="bi bi-search me-1"></i> Search
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#dashboardTab">
+                            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+                            <span class="badge bg-success ms-1" id="eligibleBadge">0</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="tab-content">
+            <!-- Search Tab -->
+            <div class="tab-pane fade show active" id="searchTab">
+                <div class="container-fluid py-4">
+                    <div class="row">
+                        <!-- Search Panel -->
+                        <div class="col-lg-3 mb-4">
+                            <div class="card">
+                                <div class="card-header"><i class="bi bi-funnel me-2"></i>Search Filters</div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Company Type</label>
+                                        <select id="companyType" class="form-select">
+                                            <option value="">Select type...</option>
+                                            <option value="property_manager">Property Manager</option>
+                                            <option value="realtor">Realtor / Real Estate</option>
+                                            <option value="plumber">Plumber</option>
+                                            <option value="electrician">Electrician</option>
+                                            <option value="hvac">HVAC</option>
+                                            <option value="general_contractor">General Contractor</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Cities</label>
+                                        <select id="citySelect" class="form-select mb-2"><option value="">Add city...</option></select>
+                                        <div id="selectedCities" class="d-flex flex-wrap gap-1"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Min Reviews</label>
+                                        <input type="number" id="minReviews" class="form-control" value="10" min="0">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Max Reviews</label>
+                                        <input type="number" id="maxReviews" class="form-control" placeholder="No limit" min="0">
+                                        <small class="text-muted">Filter out large companies</small>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="form-label fw-semibold">Max Results</label>
+                                        <input type="number" id="maxResults" class="form-control" value="100" min="10" max="500">
+                                    </div>
+                                    <button id="searchBtn" class="btn btn-primary w-100 mb-2"><i class="bi bi-search me-2"></i>Search Companies</button>
+                                    <button id="loadMoreBtn" class="btn btn-outline-primary w-100 d-none"><i class="bi bi-plus-circle me-2"></i>Load More</button>
+                                </div>
+                            </div>
+                            
+                            <div class="card mt-3">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-bar-chart me-2"></i>Session Stats</span>
+                                    <button id="refreshStatsBtn" class="btn btn-outline-secondary btn-sm" title="Refresh"><i class="bi bi-arrow-clockwise"></i></button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="row g-0 text-center">
+                                        <div class="col-6 p-3 border-end border-bottom">
+                                            <div class="number" id="statCompanies">0</div>
+                                            <div class="label">Companies</div>
+                                        </div>
+                                        <div class="col-6 p-3 border-bottom">
+                                            <div class="number" id="statContacts">0</div>
+                                            <div class="label">Contacts</div>
+                                        </div>
+                                        <div class="col-6 p-3 border-end">
+                                            <div class="number" id="statEmails">0</div>
+                                            <div class="label">Emails</div>
+                                        </div>
+                                        <div class="col-6 p-3">
+                                            <div class="number" id="statPhones">0</div>
+                                            <div class="label">Phones</div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 border-top bg-light">
+                                        <small class="text-muted"><i class="bi bi-database me-1"></i>DB: <strong id="dbTotalCompanies">0</strong> saved, <strong id="dbEnrichedCompanies">0</strong> enriched</small>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <!-- Company Type -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Company Type</label>
-                                <select id="companyType" class="form-select">
-                                    <option value="">Select type...</option>
+                        
+                        <!-- Results Panel -->
+                        <div class="col-lg-9">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-building me-2"></i>Results <span class="badge bg-secondary ms-2" id="resultCount">0</span></span>
+                                    <div>
+                                        <button id="enrichAllBtn" class="btn btn-success btn-sm me-2 d-none"><i class="bi bi-magic me-1"></i>Enrich All</button>
+                                        <button id="exportBtn" class="btn btn-outline-primary btn-sm"><i class="bi bi-download me-1"></i>Export CSV</button>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover results-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th style="width: 30px;"><input type="checkbox" id="selectAll" class="form-check-input"></th>
+                                                    <th>Company</th>
+                                                    <th>Location</th>
+                                                    <th>Rating</th>
+                                                    <th>Employees</th>
+                                                    <th>Contact</th>
+                                                    <th>Email / Phone</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="resultsBody">
+                                                <tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">Select cities and company type, then click Search</p></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dashboard Tab -->
+            <div class="tab-pane fade" id="dashboardTab">
+                <div class="container-fluid py-4">
+                    <div class="row mb-4">
+                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-primary" id="dashTotalCompanies">0</div><div class="label">Total Companies</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-success" id="dashEligible">0</div><div class="label">Eligible Leads</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-info" id="dashWithEmail">0</div><div class="label">With Valid Email</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-warning" id="dashWithPhone">0</div><div class="label">With Phone</div></div></div>
+                    </div>
+                    
+                    <div class="filter-bar">
+                        <div class="row g-3 align-items-center">
+                            <div class="col-auto"><label class="form-label mb-0 fw-semibold">Filters:</label></div>
+                            <div class="col-md-2">
+                                <select id="filterType" class="form-select">
+                                    <option value="">All Types</option>
                                     <option value="property_manager">Property Manager</option>
-                                    <option value="realtor">Realtor / Real Estate</option>
+                                    <option value="realtor">Realtor</option>
                                     <option value="plumber">Plumber</option>
                                     <option value="electrician">Electrician</option>
+                                    <option value="hvac">HVAC</option>
                                 </select>
                             </div>
-                            
-                            <!-- Cities -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Cities</label>
-                                <select id="citySelect" class="form-select mb-2">
-                                    <option value="">Add city...</option>
+                            <div class="col-md-2">
+                                <select id="filterCity" class="form-select"><option value="">All Cities</option></select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="text" id="filterZip" class="form-control" placeholder="ZIP code">
+                            </div>
+                            <div class="col-md-2">
+                                <select id="filterEligible" class="form-select">
+                                    <option value="eligible">Eligible Only</option>
+                                    <option value="all">All Companies</option>
+                                    <option value="email">Has Valid Email</option>
+                                    <option value="phone">Has Phone</option>
                                 </select>
-                                <div id="selectedCities" class="d-flex flex-wrap gap-1"></div>
                             </div>
-                            
-                            <!-- Min Reviews -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Min Reviews</label>
-                                <input type="number" id="minReviews" class="form-control" value="10" min="0">
-                            </div>
-                            
-                            <!-- Max Reviews -->
-                            <div class="mb-3">
-                                <label class="form-label fw-semibold">Max Reviews</label>
-                                <input type="number" id="maxReviews" class="form-control" placeholder="No limit" min="0">
-                                <small class="text-muted">Filter out large companies</small>
-                            </div>
-                            
-                            <!-- Max Results -->
-                            <div class="mb-4">
-                                <label class="form-label fw-semibold">Max Results</label>
-                                <input type="number" id="maxResults" class="form-control" value="100" min="10" max="500">
-                            </div>
-                            
-                            <button id="searchBtn" class="btn btn-primary w-100 mb-2">
-                                <i class="bi bi-search me-2"></i>Search Companies
-                            </button>
-                            
-                            <button id="loadMoreBtn" class="btn btn-outline-primary w-100 d-none">
-                                <i class="bi bi-plus-circle me-2"></i>Load More
-                            </button>
+                            <div class="col-auto"><button id="applyFiltersBtn" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Apply</button></div>
+                            <div class="col-auto"><button id="exportDashboardBtn" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export</button></div>
                         </div>
                     </div>
                     
-                    <!-- Stats -->
-                    <div class="card mt-3">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-bar-chart me-2"></i>Session Stats</span>
-                            <button id="refreshStatsBtn" class="btn btn-outline-secondary btn-sm" title="Refresh from database">
-                                <i class="bi bi-arrow-clockwise"></i>
-                            </button>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="row g-0 text-center">
-                                <div class="col-6 p-3 border-end border-bottom">
-                                    <div class="number" id="statCompanies">0</div>
-                                    <div class="label">Companies</div>
-                                </div>
-                                <div class="col-6 p-3 border-bottom">
-                                    <div class="number" id="statContacts">0</div>
-                                    <div class="label">Contacts</div>
-                                </div>
-                                <div class="col-6 p-3 border-end">
-                                    <div class="number" id="statEmails">0</div>
-                                    <div class="label">Emails</div>
-                                </div>
-                                <div class="col-6 p-3">
-                                    <div class="number" id="statPhones">0</div>
-                                    <div class="label">Phones</div>
-                                </div>
-                            </div>
-                            <div class="p-3 border-top bg-light">
-                                <small class="text-muted">
-                                    <i class="bi bi-database me-1"></i>
-                                    Database: <strong id="dbTotalCompanies">0</strong> saved, 
-                                    <strong id="dbEnrichedCompanies">0</strong> enriched
-                                </small>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Load Saved Button -->
-                    <button id="loadSavedBtn" class="btn btn-outline-info w-100 mt-3">
-                        <i class="bi bi-cloud-download me-2"></i>Load Saved Companies
-                    </button>
-                </div>
-                
-                <!-- Results Panel -->
-                <div class="col-lg-9">
                     <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <span>
-                                <i class="bi bi-building me-2"></i>Results
-                                <span class="badge bg-secondary ms-2" id="resultCount">0</span>
-                            </span>
-                            <div>
-                                <button id="enrichAllBtn" class="btn btn-success btn-sm me-2 d-none">
-                                    <i class="bi bi-magic me-1"></i>Enrich All
-                                </button>
-                                <button id="exportBtn" class="btn btn-outline-primary btn-sm">
-                                    <i class="bi bi-download me-1"></i>Export CSV
-                                </button>
-                            </div>
-                        </div>
+                        <div class="card-header"><i class="bi bi-list-check me-2"></i>Eligible Leads <span class="badge bg-primary ms-2" id="dashResultCount">0</span></div>
                         <div class="card-body p-0">
                             <div class="table-responsive">
                                 <table class="table table-hover results-table mb-0">
                                     <thead>
                                         <tr>
-                                            <th style="width: 30px;">
-                                                <input type="checkbox" id="selectAll" class="form-check-input">
-                                            </th>
                                             <th>Company</th>
-                                            <th>Location</th>
+                                            <th>Type</th>
+                                            <th>City / ZIP</th>
                                             <th>Rating</th>
-                                            <th>Employees</th>
                                             <th>Contact</th>
-                                            <th>Email / Phone</th>
-                                            <th>Status</th>
-                                            <th>Actions</th>
+                                            <th>Email</th>
+                                            <th>Phone</th>
+                                            <th>Source</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="resultsBody">
-                                        <tr>
-                                            <td colspan="9" class="text-center text-muted py-5">
-                                                <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
-                                                <p class="mt-3">Select cities and company type, then click Search</p>
-                                            </td>
-                                        </tr>
+                                    <tbody id="dashboardBody">
+                                        <tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-funnel" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">Click "Apply" to load eligible leads</p></td></tr>
                                     </tbody>
                                 </table>
                             </div>

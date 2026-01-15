@@ -1,16 +1,12 @@
 /**
  * OnPoint Pros Prospecting Tool
- * Frontend JavaScript
+ * Frontend JavaScript with Step Tracking & Dashboard
  */
 
 // ==================== CONFIG ====================
 const CONFIG = {
     API_BASE: 'https://handyman-kpi-fastapi-backend.fly.dev',
-    // Simple client-side auth (not secure, just for personal use)
-    VALID_CREDS: {
-        username: 'thuvo',
-        passwordHash: '116bfe0b8eb0c9192ac020ed04c1d670c498a3849c160d733e44c9a6e394b7d8' // SHA-256 of password
-    }
+    VALID_CREDS: { username: 'thuvo', passwordHash: '116bfe0b8eb0c9192ac020ed04c1d670c498a3849c160d733e44c9a6e394b7d8' }
 };
 
 // ==================== STATE ====================
@@ -19,28 +15,22 @@ let state = {
     authToken: null,
     selectedCities: [],
     companies: [],
+    dashboardCompanies: [],
     fetchedPlaceIds: new Set(),
-    stats: {
-        companies: 0,
-        contacts: 0,
-        emails: 0,
-        phones: 0
-    },
+    stats: { companies: 0, contacts: 0, emails: 0, phones: 0 },
     isSearching: false,
-    isEnriching: false
+    isEnriching: false,
+    enrichStats: { apollo: 0, scraper: 0, hunter: 0 }
 };
 
 // ==================== UTILS ====================
 async function sha256(message) {
     const msgBuffer = new TextEncoder().encode(message);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function showError(message) {
-    alert(message);
-}
+function showError(message) { alert(message); }
 
 function updateStats() {
     document.getElementById('statCompanies').textContent = state.stats.companies;
@@ -49,91 +39,67 @@ function updateStats() {
     document.getElementById('statPhones').textContent = state.stats.phones;
 }
 
-function setProgress(percent, text) {
-    const progressDiv = document.getElementById('searchProgress');
-    const progressBar = document.getElementById('progressBar');
-    const progressText = document.getElementById('progressText');
-    
-    if (percent === null) {
-        progressDiv.classList.remove('active');
-    } else {
-        progressDiv.classList.add('active');
-        progressBar.style.width = `${percent}%`;
-        progressText.textContent = text || 'Processing...';
-    }
+// ==================== STEP PROGRESS ====================
+function showStepProgress(title) {
+    document.getElementById('stepProgress').classList.add('active');
+    document.getElementById('stepTitle').textContent = title;
+    document.getElementById('stepOverall').textContent = '';
+    document.getElementById('stepProgressBar').style.width = '0%';
+    // Reset all steps
+    ['places', 'apollo', 'scraper', 'hunter'].forEach(step => {
+        const el = document.querySelector(`[data-step="${step}"]`);
+        el.className = 'step-item step-pending';
+        document.getElementById(`step${step.charAt(0).toUpperCase() + step.slice(1)}Detail`).textContent = 'Waiting...';
+    });
+}
+
+function updateStep(step, status, detail) {
+    const el = document.querySelector(`[data-step="${step}"]`);
+    el.className = `step-item step-${status}`;
+    const detailEl = document.getElementById(`step${step.charAt(0).toUpperCase() + step.slice(1)}Detail`);
+    detailEl.textContent = detail;
+}
+
+function setStepProgress(percent, overall) {
+    document.getElementById('stepProgressBar').style.width = `${percent}%`;
+    if (overall) document.getElementById('stepOverall').textContent = overall;
+}
+
+function hideStepProgress() {
+    setTimeout(() => document.getElementById('stepProgress').classList.remove('active'), 2000);
 }
 
 // ==================== API CALLS ====================
 async function apiCall(endpoint, method = 'GET', body = null) {
-    const headers = {
-        'Content-Type': 'application/json'
-    };
-    
-    if (state.authToken) {
-        headers['Authorization'] = `Bearer ${state.authToken}`;
-    }
-    
+    const headers = { 'Content-Type': 'application/json' };
+    if (state.authToken) headers['Authorization'] = `Bearer ${state.authToken}`;
     const options = { method, headers };
-    if (body) {
-        options.body = JSON.stringify(body);
-    }
-    
+    if (body) options.body = JSON.stringify(body);
     const response = await fetch(`${CONFIG.API_BASE}${endpoint}`, options);
-    
-    if (response.status === 401) {
-        logout();
-        throw new Error('Session expired');
-    }
-    
+    if (response.status === 401) { logout(); throw new Error('Session expired'); }
     return response.json();
 }
 
 async function login(username, password) {
-    // First do client-side check
-    const passwordHash = await sha256(password);
-    if (username !== CONFIG.VALID_CREDS.username) {
-        throw new Error('Invalid credentials');
-    }
-    
-    // Now get real API token - send as JSON
+    if (username !== CONFIG.VALID_CREDS.username) throw new Error('Invalid credentials');
     const response = await fetch(`${CONFIG.API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            email: 'you@onpointpros.com',
-            password: 'pass123'
-        })
+        body: JSON.stringify({ email: 'you@onpointpros.com', password: 'pass123' })
     });
-    
     const data = await response.json();
-    
-    if (!response.ok || !data.token) {
-        throw new Error(data.detail || 'Login failed');
-    }
-    
+    if (!response.ok || !data.token) throw new Error(data.detail || 'Login failed');
     return data.token;
 }
 
 async function fetchCities() {
     const result = await apiCall('/prospecting/cities');
-    if (result.ok) {
-        return result.cities;
-    }
-    return [];
+    return result.ok ? result.cities : [];
 }
 
 async function searchCompanies(cities, companyType, minReviews, maxReviews, maxResults, excludePlaceIds) {
-    const payload = {
-        cities,
-        companyType,
-        minReviews,
-        maxResults,
-        excludePlaceIds: excludePlaceIds ? Array.from(excludePlaceIds) : []
-    };
-    if (maxReviews) {
-        payload.maxReviews = maxReviews;
-    }
-    console.log('Sending search payload:', payload);
+    const payload = { cities, companyType, minReviews, maxResults, excludePlaceIds: Array.from(excludePlaceIds) };
+    if (maxReviews) payload.maxReviews = maxReviews;
     return await apiCall('/prospecting/search-companies', 'POST', payload);
 }
 
@@ -167,10 +133,9 @@ async function updateDbStats() {
         if (result.ok) {
             document.getElementById('dbTotalCompanies').textContent = result.totalCompanies || 0;
             document.getElementById('dbEnrichedCompanies').textContent = result.enrichedCompanies || 0;
+            document.getElementById('eligibleBadge').textContent = result.eligibleCompanies || 0;
         }
-    } catch (e) {
-        console.error('Failed to fetch stats:', e);
-    }
+    } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
 // ==================== UI FUNCTIONS ====================
@@ -194,17 +159,12 @@ function logout() {
 
 function addCityTag(city) {
     if (state.selectedCities.includes(city.name)) return;
-    
     state.selectedCities.push(city.name);
-    
     const container = document.getElementById('selectedCities');
     const tag = document.createElement('span');
     tag.className = 'city-tag';
     tag.dataset.city = city.name;
-    tag.innerHTML = `
-        ${city.displayName}
-        <span class="remove" onclick="removeCity('${city.name}')">&times;</span>
-    `;
+    tag.innerHTML = `${city.displayName}<span class="remove" onclick="removeCity('${city.name}')">&times;</span>`;
     container.appendChild(tag);
 }
 
@@ -215,94 +175,58 @@ function removeCity(cityName) {
 }
 
 function renderCompanyRow(company, index) {
-    const statusClass = company.enriched 
-        ? (company.contacts?.length ? 'enriched' : 'no-contact')
-        : '';
-    
+    const statusClass = company.enriched ? (company.contacts?.length ? 'enriched' : 'no-contact') : '';
     const statusBadge = company.enriched
-        ? (company.contacts?.length 
-            ? '<span class="status-badge status-enriched">Enriched</span>'
-            : '<span class="status-badge status-no-contact">No Contact</span>')
+        ? (company.contacts?.length ? '<span class="status-badge status-enriched">Enriched</span>' : '<span class="status-badge status-no-contact">No Contact</span>')
         : '<span class="status-badge status-pending">Pending</span>';
     
-    // Get primary contact
     const contact = company.contacts?.[0];
     const contactName = contact?.name || '-';
     const contactTitle = contact?.title ? `<br><small class="text-muted">${contact.title}</small>` : '';
     
-    // Get email/phone
-    const email = company.contacts?.find(c => c.email)?.email;
-    const phone = company.contacts?.find(c => c.phone)?.phone || company.phone;
+    // Get email with validation status
+    const emailContact = company.contacts?.find(c => c.email);
+    let emailHtml = '';
+    if (emailContact) {
+        const isValid = emailContact.emailValid !== false;
+        const validBadge = emailContact.source === 'website_scrape' 
+            ? `<span class="valid-badge ${isValid ? 'valid-yes' : 'valid-no'}">${isValid ? '✓' : '✗'}</span>` 
+            : '';
+        emailHtml = isValid 
+            ? `<a href="mailto:${emailContact.email}" class="email">${emailContact.email}</a>${validBadge}`
+            : `<span class="invalid">${emailContact.email}</span>${validBadge}`;
+    }
     
-    const emailHtml = email ? `<a href="mailto:${email}" class="email">${email}</a>` : '';
+    const phone = company.contacts?.find(c => c.phone)?.phone || company.phone;
     const phoneHtml = phone ? `<br><span class="phone">${phone}</span>` : '';
     
-    // Source badge
     const source = contact?.source;
-    const sourceBadge = source 
-        ? `<span class="source-badge source-${source === 'apollo' ? 'apollo' : source === 'website_scrape' ? 'scrape' : 'google'}">${source}</span>`
-        : '';
-    
-    // Employee count
-    const employees = company.employeeCount 
-        ? `<span class="employee-badge">${company.employeeCount}</span>`
-        : '-';
+    const sourceBadge = source ? `<span class="source-badge source-${source === 'apollo' ? 'apollo' : source === 'website_scrape' ? 'scrape' : 'google'}">${source}</span>` : '';
+    const employees = company.employeeCount ? `<span class="employee-badge">${company.employeeCount}</span>` : '-';
     
     return `
         <tr class="company-row ${statusClass}" data-index="${index}">
             <td><input type="checkbox" class="form-check-input row-select" data-index="${index}"></td>
-            <td>
-                <strong>${company.name}</strong>
-                ${company.website ? `<br><a href="${company.website}" target="_blank" class="small text-muted">${company.domain || company.website}</a>` : ''}
-            </td>
+            <td><strong>${company.name}</strong>${company.website ? `<br><a href="${company.website}" target="_blank" class="small text-muted">${company.domain || company.website}</a>` : ''}</td>
             <td><small>${company.address || '-'}</small></td>
-            <td>
-                ${company.rating ? `<i class="bi bi-star-fill text-warning"></i> ${company.rating}` : '-'}
-                <br><small class="text-muted">${company.reviewCount || 0} reviews</small>
-            </td>
+            <td>${company.rating ? `<i class="bi bi-star-fill text-warning"></i> ${company.rating}` : '-'}<br><small class="text-muted">${company.reviewCount || 0} reviews</small></td>
             <td>${employees}</td>
-            <td>
-                ${contactName}${contactTitle}
-                ${sourceBadge}
-            </td>
-            <td class="contact-info">
-                ${emailHtml}${phoneHtml}
-            </td>
+            <td>${contactName}${contactTitle}${sourceBadge}</td>
+            <td class="contact-info">${emailHtml}${phoneHtml}</td>
             <td>${statusBadge}</td>
-            <td>
-                ${!company.enriched ? `
-                    <button class="btn btn-sm btn-outline-primary enrich-btn" data-index="${index}">
-                        <i class="bi bi-magic"></i>
-                    </button>
-                ` : `
-                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                        <i class="bi bi-check"></i>
-                    </button>
-                `}
-            </td>
-        </tr>
-    `;
+            <td>${!company.enriched ? `<button class="btn btn-sm btn-outline-primary enrich-btn" data-index="${index}"><i class="bi bi-magic"></i></button>` : `<button class="btn btn-sm btn-outline-secondary" disabled><i class="bi bi-check"></i></button>`}</td>
+        </tr>`;
 }
 
 function renderResults() {
     const tbody = document.getElementById('resultsBody');
-    
     if (state.companies.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center text-muted py-5">
-                    <i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i>
-                    <p class="mt-3">Select cities and company type, then click Search</p>
-                </td>
-            </tr>
-        `;
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">Select cities and company type, then click Search</p></td></tr>`;
         return;
     }
-    
     tbody.innerHTML = state.companies.map((c, i) => renderCompanyRow(c, i)).join('');
     document.getElementById('resultCount').textContent = state.companies.length;
     
-    // Show enrich all button if there are pending companies
     const pendingCount = state.companies.filter(c => !c.enriched).length;
     const enrichAllBtn = document.getElementById('enrichAllBtn');
     if (pendingCount > 0) {
@@ -312,40 +236,28 @@ function renderResults() {
         enrichAllBtn.classList.add('d-none');
     }
     
-    // Show load more if we hit the limit
     const loadMoreBtn = document.getElementById('loadMoreBtn');
     if (state.companies.length >= parseInt(document.getElementById('maxResults').value)) {
         loadMoreBtn.classList.remove('d-none');
     }
     
-    // Attach enrich button handlers
     document.querySelectorAll('.enrich-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const index = parseInt(btn.dataset.index);
-            await enrichSingleCompany(index);
+        btn.addEventListener('click', async () => {
+            await enrichSingleCompany(parseInt(btn.dataset.index));
         });
     });
 }
 
 async function enrichSingleCompany(index) {
-    const result = await enrichSingleCompanyWithTracking(index);
-    return result;
-}
-
-async function enrichSingleCompanyWithTracking(index) {
     const company = state.companies[index];
     if (company.enriched) return { cached: true };
     
     const btn = document.querySelector(`.enrich-btn[data-index="${index}"]`);
-    if (btn) {
-        btn.innerHTML = '<span class="loading-spinner"></span>';
-        btn.disabled = true;
-    }
+    if (btn) { btn.innerHTML = '<span class="loading-spinner"></span>'; btn.disabled = true; }
     
     let wasCached = false;
     
     try {
-        // First get place details if we don't have website
         if (!company.website) {
             const detailsResult = await getPlaceDetails(company.placeId);
             if (detailsResult.ok && detailsResult.details) {
@@ -356,7 +268,6 @@ async function enrichSingleCompanyWithTracking(index) {
             }
         }
         
-        // Now enrich with Apollo/scraping
         const result = await enrichCompany(company);
         
         if (result.ok) {
@@ -366,9 +277,12 @@ async function enrichSingleCompanyWithTracking(index) {
             company.domain = result.domain || company.domain;
             wasCached = result.cached || false;
             
-            // Update stats
+            // Track source stats
+            if (result.primarySource === 'apollo') state.enrichStats.apollo++;
+            else if (result.primarySource === 'website_scrape') state.enrichStats.scraper++;
+            
             state.stats.contacts += result.contacts?.length || 0;
-            state.stats.emails += result.contacts?.filter(c => c.email).length || 0;
+            state.stats.emails += result.contacts?.filter(c => c.email && c.emailValid !== false).length || 0;
             state.stats.phones += result.contacts?.filter(c => c.phone).length || 0;
             updateStats();
         }
@@ -387,95 +301,183 @@ async function enrichAllCompanies() {
     if (pending.length === 0) return;
     
     state.isEnriching = true;
+    state.enrichStats = { apollo: 0, scraper: 0, hunter: 0 };
     document.getElementById('enrichAllBtn').disabled = true;
     
-    let cachedCount = 0;
-    let newCount = 0;
+    showStepProgress(`Enriching ${pending.length} companies...`);
+    updateStep('places', 'done', 'Complete');
+    updateStep('apollo', 'active', 'Starting...');
+    
+    let cachedCount = 0, newCount = 0;
     
     for (let i = 0; i < state.companies.length; i++) {
         if (state.companies[i].enriched) continue;
         
-        setProgress(
-            ((i + 1) / state.companies.length) * 100,
-            `Enriching ${i + 1} of ${state.companies.length}... (${cachedCount} cached, ${newCount} new API calls)`
-        );
+        const progress = ((i + 1) / state.companies.length) * 100;
+        setStepProgress(progress, `${i + 1} / ${state.companies.length}`);
         
-        const result = await enrichSingleCompanyWithTracking(i);
-        if (result?.cached) {
-            cachedCount++;
-        } else {
-            newCount++;
-        }
+        // Update step details
+        updateStep('apollo', 'active', `${state.enrichStats.apollo} contacts`);
+        updateStep('scraper', state.enrichStats.scraper > 0 ? 'done' : 'pending', `${state.enrichStats.scraper} scraped`);
         
-        // Small delay to respect rate limits (skip if cached)
-        if (!result?.cached) {
-            await new Promise(r => setTimeout(r, 500));
-        }
+        const result = await enrichSingleCompany(i);
+        if (result?.cached) cachedCount++;
+        else newCount++;
+        
+        if (!result?.cached) await new Promise(r => setTimeout(r, 500));
     }
     
-    setProgress(100, `Done! ${cachedCount} from cache, ${newCount} new API calls`);
-    setTimeout(() => setProgress(null), 3000);
+    // Final step updates
+    updateStep('apollo', 'done', `${state.enrichStats.apollo} contacts`);
+    updateStep('scraper', state.enrichStats.scraper > 0 ? 'done' : 'pending', `${state.enrichStats.scraper} scraped`);
+    updateStep('hunter', 'done', 'Validated');
+    setStepProgress(100, `Done! ${cachedCount} cached, ${newCount} new`);
     
+    hideStepProgress();
     state.isEnriching = false;
     document.getElementById('enrichAllBtn').disabled = false;
     await updateDbStats();
     renderResults();
 }
 
-function exportToCSV() {
-    if (state.companies.length === 0) {
+// ==================== DASHBOARD ====================
+async function loadDashboard() {
+    const filterType = document.getElementById('filterType').value;
+    const filterCity = document.getElementById('filterCity').value;
+    const filterZip = document.getElementById('filterZip').value;
+    const filterEligible = document.getElementById('filterEligible').value;
+    
+    try {
+        const result = await fetchSavedCompanies(filterType, true, 500);
+        
+        if (result.ok && result.companies) {
+            let companies = result.companies;
+            
+            // Apply filters
+            if (filterCity) {
+                companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
+            }
+            if (filterZip) {
+                companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
+            }
+            
+            // Filter by eligibility
+            if (filterEligible === 'eligible') {
+                companies = companies.filter(c => {
+                    const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
+                    const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
+                    return hasValidEmail || hasPhone;
+                });
+            } else if (filterEligible === 'email') {
+                companies = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false));
+            } else if (filterEligible === 'phone') {
+                companies = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone);
+            }
+            
+            state.dashboardCompanies = companies;
+            renderDashboard();
+            
+            // Update stats
+            document.getElementById('dashTotalCompanies').textContent = result.companies.length;
+            document.getElementById('dashEligible').textContent = companies.length;
+            document.getElementById('dashWithEmail').textContent = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false)).length;
+            document.getElementById('dashWithPhone').textContent = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone).length;
+        }
+    } catch (err) {
+        console.error('Dashboard load error:', err);
+        showError('Failed to load dashboard: ' + err.message);
+    }
+}
+
+function renderDashboard() {
+    const tbody = document.getElementById('dashboardBody');
+    
+    if (state.dashboardCompanies.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">No companies match the filters</p></td></tr>`;
+        document.getElementById('dashResultCount').textContent = 0;
+        return;
+    }
+    
+    document.getElementById('dashResultCount').textContent = state.dashboardCompanies.length;
+    
+    tbody.innerHTML = state.dashboardCompanies.map(c => {
+        const contact = c.contacts?.[0];
+        const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
+        const phoneContact = c.contacts?.find(con => con.phone);
+        const phone = phoneContact?.phone || c.phone;
+        
+        const city = c.searchedCities?.[0] || '';
+        const zip = c.foundInZip || '';
+        
+        const source = c.primarySource || contact?.source || '';
+        const sourceBadge = source ? `<span class="source-badge source-${source === 'apollo' ? 'apollo' : 'scrape'}">${source}</span>` : '';
+        
+        return `
+            <tr>
+                <td><strong>${c.companyName}</strong>${c.website ? `<br><a href="${c.website}" target="_blank" class="small text-muted">${c.domain || 'website'}</a>` : ''}</td>
+                <td><small>${c.companyType?.replace('_', ' ') || '-'}</small></td>
+                <td><small>${city}<br>${zip}</small></td>
+                <td>${c.rating ? `<i class="bi bi-star-fill text-warning"></i> ${c.rating}` : '-'}</td>
+                <td>${contact?.name || '-'}${contact?.title ? `<br><small class="text-muted">${contact.title}</small>` : ''}</td>
+                <td class="contact-info">${emailContact ? `<a href="mailto:${emailContact.email}" class="email">${emailContact.email}</a>` : '-'}</td>
+                <td class="contact-info">${phone ? `<span class="phone">${phone}</span>` : '-'}</td>
+                <td>${sourceBadge}</td>
+            </tr>`;
+    }).join('');
+}
+
+function exportDashboardCSV() {
+    if (state.dashboardCompanies.length === 0) {
         showError('No data to export');
         return;
     }
     
-    const headers = [
-        'Company Name',
-        'Address',
-        'Rating',
-        'Review Count',
-        'Website',
-        'Domain',
-        'Employee Count',
-        'Contact Name',
-        'Contact Title',
-        'Email',
-        'Phone',
-        'Contact Source',
-        'Place ID'
-    ];
+    const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
     
-    const rows = state.companies.map(company => {
-        const contact = company.contacts?.[0];
+    const rows = state.dashboardCompanies.map(c => {
+        const contact = c.contacts?.[0];
+        const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
+        const phone = c.contacts?.find(con => con.phone)?.phone || c.phone || '';
         return [
-            company.name || '',
-            (company.address || '').replace(/,/g, ';'),
-            company.rating || '',
-            company.reviewCount || '',
-            company.website || '',
-            company.domain || '',
-            company.employeeCount || '',
+            c.companyName || '',
+            c.companyType || '',
+            c.searchedCities?.[0] || '',
+            c.foundInZip || '',
+            (c.address || '').replace(/,/g, ';'),
+            c.rating || '',
+            c.reviewCount || '',
+            c.website || '',
             contact?.name || '',
             contact?.title || '',
-            company.contacts?.find(c => c.email)?.email || '',
-            company.contacts?.find(c => c.phone)?.phone || company.phone || '',
-            contact?.source || '',
-            company.placeId || ''
+            emailContact?.email || '',
+            phone,
+            c.primarySource || ''
         ];
     });
     
-    const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-    
+    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    const date = new Date().toISOString().split('T')[0];
-    const companyType = document.getElementById('companyType').value || 'companies';
-    link.setAttribute('href', url);
-    link.setAttribute('download', `prospecting_${companyType}_${date}.csv`);
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `eligible_leads_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function exportToCSV() {
+    if (state.companies.length === 0) { showError('No data to export'); return; }
+    const headers = ['Company Name', 'Address', 'Rating', 'Review Count', 'Website', 'Domain', 'Employee Count', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Contact Source', 'Place ID'];
+    const rows = state.companies.map(company => {
+        const contact = company.contacts?.[0];
+        return [company.name || '', (company.address || '').replace(/,/g, ';'), company.rating || '', company.reviewCount || '', company.website || '', company.domain || '', company.employeeCount || '', contact?.name || '', contact?.title || '', company.contacts?.find(c => c.email)?.email || '', company.contacts?.find(c => c.phone)?.phone || company.phone || '', contact?.source || '', company.placeId || ''];
+    });
+    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.setAttribute('href', URL.createObjectURL(blob));
+    link.setAttribute('download', `prospecting_${document.getElementById('companyType').value || 'companies'}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -485,30 +487,17 @@ function exportToCSV() {
 // ==================== EVENT HANDLERS ====================
 document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    
     const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('loginError');
-    
     try {
         const token = await login(username, password);
         state.authToken = token;
         state.isLoggedIn = true;
         localStorage.setItem('prospecting_token', token);
-        
         errorDiv.classList.add('d-none');
         showAppScreen();
-        
-        // Load cities
-        const cities = await fetchCities();
-        const citySelect = document.getElementById('citySelect');
-        cities.forEach(city => {
-            const option = document.createElement('option');
-            option.value = city.name;
-            option.textContent = `${city.displayName} (${city.zipCount} ZIPs)`;
-            option.dataset.city = JSON.stringify(city);
-            citySelect.appendChild(option);
-        });
+        await initApp();
     } catch (err) {
         errorDiv.textContent = err.message;
         errorDiv.classList.remove('d-none');
@@ -518,8 +507,7 @@ document.getElementById('loginForm').addEventListener('submit', async (e) => {
 document.getElementById('citySelect').addEventListener('change', (e) => {
     const selected = e.target.selectedOptions[0];
     if (selected && selected.dataset.city) {
-        const city = JSON.parse(selected.dataset.city);
-        addCityTag(city);
+        addCityTag(JSON.parse(selected.dataset.city));
         e.target.value = '';
     }
 });
@@ -530,77 +518,43 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
     const maxReviews = parseInt(document.getElementById('maxReviews').value) || null;
     const maxResults = parseInt(document.getElementById('maxResults').value) || 100;
     
-    if (!companyType) {
-        showError('Please select a company type');
-        return;
-    }
-    
-    if (state.selectedCities.length === 0) {
-        showError('Please select at least one city');
-        return;
-    }
+    if (!companyType) { showError('Please select a company type'); return; }
+    if (state.selectedCities.length === 0) { showError('Please select at least one city'); return; }
     
     state.isSearching = true;
     state.companies = [];
     state.fetchedPlaceIds.clear();
     state.stats = { companies: 0, contacts: 0, emails: 0, phones: 0 };
     updateStats();
-    
     document.getElementById('searchBtn').disabled = true;
     document.getElementById('loadMoreBtn').classList.add('d-none');
-    setProgress(10, 'Searching companies...');
+    
+    showStepProgress('Searching companies...');
+    updateStep('places', 'active', 'Searching...');
     
     try {
-        const result = await searchCompanies(
-            state.selectedCities,
-            companyType,
-            minReviews,
-            maxReviews,
-            maxResults,
-            state.fetchedPlaceIds
-        );
-        
-        console.log('Search result:', result);
+        const result = await searchCompanies(state.selectedCities, companyType, minReviews, maxReviews, maxResults, state.fetchedPlaceIds);
         
         if (result.ok) {
-            state.companies = result.companies.map(c => ({
-                ...c,
-                enriched: false,
-                contacts: []
-            }));
-            
-            // Track fetched place IDs
+            state.companies = result.companies.map(c => ({ ...c, enriched: false, contacts: [] }));
             result.companies.forEach(c => state.fetchedPlaceIds.add(c.placeId));
-            
             state.stats.companies = state.companies.length;
             updateStats();
             
-            // Show detailed stats
-            const newCount = result.savedCount || result.returnedCount;
-            const existingCount = result.skippedExisting || 0;
-            const msg = `Found ${result.returnedCount} new companies (${existingCount} already in DB)`;
-            setProgress(100, msg);
-            
-            // Update database stats
+            updateStep('places', 'done', `${result.returnedCount} found`);
+            setStepProgress(100, `${result.returnedCount} companies`);
             await updateDbStats();
-            
-            setTimeout(() => setProgress(null), 2500);
         } else {
             showError(result.error || 'Search failed');
-            setProgress(null);
+            updateStep('places', 'error', 'Failed');
         }
     } catch (err) {
         console.error('Search error:', err);
-        console.error('Error details:', {
-            message: err.message,
-            stack: err.stack,
-            cities: state.selectedCities,
-            companyType: document.getElementById('companyType').value
-        });
         showError('Search failed: ' + err.message);
-        setProgress(null);
+        updateStep('places', 'error', err.message);
     }
     
+    hideStepProgress();
     state.isSearching = false;
     document.getElementById('searchBtn').disabled = false;
     renderResults();
@@ -613,46 +567,29 @@ document.getElementById('loadMoreBtn').addEventListener('click', async () => {
     const maxResults = parseInt(document.getElementById('maxResults').value) || 100;
     
     document.getElementById('loadMoreBtn').disabled = true;
-    setProgress(10, 'Loading more...');
+    showStepProgress('Loading more...');
+    updateStep('places', 'active', 'Searching...');
     
     try {
-        const result = await searchCompanies(
-            state.selectedCities,
-            companyType,
-            minReviews,
-            maxReviews,
-            maxResults,
-            state.fetchedPlaceIds
-        );
-        
+        const result = await searchCompanies(state.selectedCities, companyType, minReviews, maxReviews, maxResults, state.fetchedPlaceIds);
         if (result.ok && result.companies.length > 0) {
-            const newCompanies = result.companies.map(c => ({
-                ...c,
-                enriched: false,
-                contacts: []
-            }));
-            
+            const newCompanies = result.companies.map(c => ({ ...c, enriched: false, contacts: [] }));
             state.companies = [...state.companies, ...newCompanies];
             result.companies.forEach(c => state.fetchedPlaceIds.add(c.placeId));
-            
             state.stats.companies = state.companies.length;
             updateStats();
-            
-            const existingCount = result.skippedExisting || 0;
-            setProgress(100, `Loaded ${result.returnedCount} new (${existingCount} in DB)`);
+            updateStep('places', 'done', `+${result.returnedCount} more`);
             await updateDbStats();
-            setTimeout(() => setProgress(null), 2500);
         } else {
-            setProgress(100, 'No more results');
-            setTimeout(() => setProgress(null), 1500);
+            updateStep('places', 'done', 'No more results');
             document.getElementById('loadMoreBtn').classList.add('d-none');
         }
     } catch (err) {
         console.error('Load more error:', err);
         showError('Failed to load more');
-        setProgress(null);
     }
     
+    hideStepProgress();
     document.getElementById('loadMoreBtn').disabled = false;
     renderResults();
 });
@@ -660,87 +597,55 @@ document.getElementById('loadMoreBtn').addEventListener('click', async () => {
 document.getElementById('enrichAllBtn').addEventListener('click', enrichAllCompanies);
 document.getElementById('exportBtn').addEventListener('click', exportToCSV);
 document.getElementById('logoutBtn').addEventListener('click', logout);
-
 document.getElementById('selectAll').addEventListener('change', (e) => {
-    document.querySelectorAll('.row-select').forEach(cb => {
-        cb.checked = e.target.checked;
+    document.querySelectorAll('.row-select').forEach(cb => cb.checked = e.target.checked);
+});
+document.getElementById('refreshStatsBtn').addEventListener('click', updateDbStats);
+document.getElementById('applyFiltersBtn').addEventListener('click', loadDashboard);
+document.getElementById('exportDashboardBtn').addEventListener('click', exportDashboardCSV);
+
+// Tab change handler
+document.querySelectorAll('#mainTabs .nav-link').forEach(tab => {
+    tab.addEventListener('shown.bs.tab', (e) => {
+        if (e.target.dataset.bsTarget === '#dashboardTab') {
+            loadDashboard();
+        }
     });
 });
 
-// Load saved companies button
-document.getElementById('loadSavedBtn').addEventListener('click', async () => {
-    const companyType = document.getElementById('companyType').value;
-    
-    try {
-        setProgress(50, 'Loading saved companies...');
-        const result = await fetchSavedCompanies(companyType, null, 200);
-        
-        if (result.ok && result.companies) {
-            // Convert to display format
-            state.companies = result.companies.map(c => ({
-                placeId: c.placeId,
-                name: c.companyName,
-                address: c.address,
-                rating: c.rating,
-                reviewCount: c.reviewCount,
-                website: c.website,
-                phone: c.phone,
-                enriched: c.enriched || false,
-                contacts: c.contacts || [],
-                employeeCount: c.employeeCount,
-                domain: c.domain,
-                fromDatabase: true,
-            }));
-            
-            // Add to fetched set
-            result.companies.forEach(c => state.fetchedPlaceIds.add(c.placeId));
-            
-            state.stats.companies = state.companies.length;
-            updateStats();
-            renderResults();
-            
-            document.getElementById('enrichAllBtn').classList.toggle('d-none', state.companies.length === 0);
-            document.getElementById('exportBtn').classList.toggle('d-none', state.companies.length === 0);
-            
-            alert(`Loaded ${state.companies.length} saved companies`);
-        }
-    } catch (err) {
-        showError('Failed to load saved companies: ' + err.message);
-    } finally {
-        setProgress(null);
-    }
-});
-
-// Refresh stats button
-document.getElementById('refreshStatsBtn').addEventListener('click', updateDbStats);
-
 // ==================== INIT ====================
+async function initApp() {
+    try {
+        const cities = await fetchCities();
+        const citySelect = document.getElementById('citySelect');
+        const filterCitySelect = document.getElementById('filterCity');
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city.name;
+            option.textContent = `${city.displayName} (${city.zipCount} ZIPs)`;
+            option.dataset.city = JSON.stringify(city);
+            citySelect.appendChild(option);
+            
+            // Also add to dashboard filter
+            const filterOption = document.createElement('option');
+            filterOption.value = city.name;
+            filterOption.textContent = city.displayName;
+            filterCitySelect.appendChild(filterOption);
+        });
+        await updateDbStats();
+    } catch (err) {
+        console.error('Failed to init:', err);
+        logout();
+    }
+}
+
 (async function init() {
-    // Check for saved token
     const savedToken = localStorage.getItem('prospecting_token');
     if (savedToken) {
         state.authToken = savedToken;
         state.isLoggedIn = true;
         showAppScreen();
-        
-        // Load cities and stats
-        try {
-            const cities = await fetchCities();
-            const citySelect = document.getElementById('citySelect');
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city.name;
-                option.textContent = `${city.displayName} (${city.zipCount} ZIPs)`;
-                option.dataset.city = JSON.stringify(city);
-                citySelect.appendChild(option);
-            });
-            
-            // Load database stats
-            await updateDbStats();
-        } catch (err) {
-            console.error('Failed to load cities:', err);
-            logout();
-        }
+        await initApp();
     } else {
         showLoginScreen();
     }
