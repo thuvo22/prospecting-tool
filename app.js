@@ -122,14 +122,18 @@ async function fetchCities() {
     return [];
 }
 
-async function searchCompanies(cities, companyType, minReviews, maxResults, excludePlaceIds) {
-    return await apiCall('/prospecting/search-companies', 'POST', {
+async function searchCompanies(cities, companyType, minReviews, maxReviews, maxResults, excludePlaceIds) {
+    const payload = {
         cities,
         companyType,
         minReviews,
         maxResults,
         excludePlaceIds: Array.from(excludePlaceIds)
-    });
+    };
+    if (maxReviews) {
+        payload.maxReviews = maxReviews;
+    }
+    return await apiCall('/prospecting/search-companies', 'POST', payload);
 }
 
 async function enrichCompany(company) {
@@ -522,6 +526,7 @@ document.getElementById('citySelect').addEventListener('change', (e) => {
 document.getElementById('searchBtn').addEventListener('click', async () => {
     const companyType = document.getElementById('companyType').value;
     const minReviews = parseInt(document.getElementById('minReviews').value) || 10;
+    const maxReviews = parseInt(document.getElementById('maxReviews').value) || null;
     const maxResults = parseInt(document.getElementById('maxResults').value) || 100;
     
     if (!companyType) {
@@ -594,6 +599,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
 document.getElementById('loadMoreBtn').addEventListener('click', async () => {
     const companyType = document.getElementById('companyType').value;
     const minReviews = parseInt(document.getElementById('minReviews').value) || 10;
+    const maxReviews = parseInt(document.getElementById('maxReviews').value) || null;
     const maxResults = parseInt(document.getElementById('maxResults').value) || 100;
     
     document.getElementById('loadMoreBtn').disabled = true;
@@ -604,6 +610,7 @@ document.getElementById('loadMoreBtn').addEventListener('click', async () => {
             state.selectedCities,
             companyType,
             minReviews,
+            maxReviews,
             maxResults,
             state.fetchedPlaceIds
         );
