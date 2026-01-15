@@ -697,7 +697,7 @@ document.getElementById('loadSavedBtn').addEventListener('click', async () => {
             
             state.stats.companies = state.companies.length;
             updateStats();
-            renderResultsTable();
+            renderResults();
             
             document.getElementById('enrichAllBtn').classList.toggle('d-none', state.companies.length === 0);
             document.getElementById('exportBtn').classList.toggle('d-none', state.companies.length === 0);
