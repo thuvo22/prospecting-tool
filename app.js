@@ -554,6 +554,7 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
             state.selectedCities,
             companyType,
             minReviews,
+            maxReviews,
             maxResults,
             state.fetchedPlaceIds
         );
