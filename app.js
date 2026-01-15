@@ -128,7 +128,7 @@ async function searchCompanies(cities, companyType, minReviews, maxReviews, maxR
         companyType,
         minReviews,
         maxResults,
-        excludePlaceIds: Array.from(excludePlaceIds)
+        excludePlaceIds: excludePlaceIds ? Array.from(excludePlaceIds) : []
     };
     if (maxReviews) {
         payload.maxReviews = maxReviews;
