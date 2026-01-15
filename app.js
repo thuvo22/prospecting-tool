@@ -559,6 +559,8 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
             state.fetchedPlaceIds
         );
         
+        console.log('Search result:', result);
+        
         if (result.ok) {
             state.companies = result.companies.map(c => ({
                 ...c,
@@ -588,6 +590,12 @@ document.getElementById('searchBtn').addEventListener('click', async () => {
         }
     } catch (err) {
         console.error('Search error:', err);
+        console.error('Error details:', {
+            message: err.message,
+            stack: err.stack,
+            cities: state.selectedCities,
+            companyType: document.getElementById('companyType').value
+        });
         showError('Search failed: ' + err.message);
         setProgress(null);
     }
