@@ -5,7 +5,7 @@
 
 // ==================== CONFIG ====================
 const CONFIG = {
-    API_BASE: 'https://handyman-kpi-fastapi-backend.fly.dev',
+    API_BASE: 'https://prospecting-backend.fly.dev',
     VALID_CREDS: { username: 'thuvo', passwordHash: '116bfe0b8eb0c9192ac020ed04c1d670c498a3849c160d733e44c9a6e394b7d8' }
 };
 
