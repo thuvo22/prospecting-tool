@@ -320,6 +320,17 @@
                         <div class="col-md-3"><div class="card text-center p-4 stat-card" data-filter="phone" role="button"><div class="number text-warning" id="dashWithPhone">0</div><div class="label">With Phone</div></div></div>
                     </div>
                     
+                    <!-- Loading Progress Bar -->
+                    <div id="dashLoadingBar" class="mb-3" style="display: none;">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="loading-spinner me-2"></div>
+                            <span id="dashLoadingText">Loading companies...</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div id="dashProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
                     <div class="filter-bar">
                         <div class="row g-3 align-items-center">
                             <div class="col-auto"><label class="form-label mb-0 fw-semibold">Filters:</label></div>

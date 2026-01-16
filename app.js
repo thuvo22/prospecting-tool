@@ -341,6 +341,25 @@ async function enrichAllCompanies() {
 }
 
 // ==================== DASHBOARD ====================
+function showDashboardLoading(show, text = 'Loading companies...', percent = 0) {
+    const loadingBar = document.getElementById('dashLoadingBar');
+    const loadingText = document.getElementById('dashLoadingText');
+    const progressBar = document.getElementById('dashProgressBar');
+    const applyBtn = document.getElementById('applyFiltersBtn');
+    
+    if (show) {
+        loadingBar.style.display = 'block';
+        loadingText.textContent = text;
+        progressBar.style.width = `${percent}%`;
+        applyBtn.disabled = true;
+        applyBtn.innerHTML = '<span class="loading-spinner me-1"></span> Loading...';
+    } else {
+        loadingBar.style.display = 'none';
+        applyBtn.disabled = false;
+        applyBtn.innerHTML = '<i class="bi bi-funnel me-1"></i> Apply';
+    }
+}
+
 async function loadDashboard() {
     const filterType = document.getElementById('filterType').value;
     const filterCity = document.getElementById('filterCity').value;
@@ -348,10 +367,16 @@ async function loadDashboard() {
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
     
+    // Show loading bar
+    showDashboardLoading(true, 'Fetching companies from database...', 10);
+    
     try {
         // Determine enriched filter for API call
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
+        
+        showDashboardLoading(true, 'Querying API...', 30);
         const result = await fetchSavedCompanies(filterType, enrichedParam, 1000);
+        showDashboardLoading(true, 'Processing data...', 70);
         
         if (result.ok && result.companies) {
             let companies = result.companies;
@@ -378,7 +403,9 @@ async function loadDashboard() {
             }
             
             state.dashboardCompanies = companies;
+            showDashboardLoading(true, `Rendering ${companies.length} companies...`, 90);
             renderDashboard();
+            showDashboardLoading(false);
             
             // Update stats
             const allCompanies = result.companies;
@@ -403,6 +430,7 @@ async function loadDashboard() {
         }
     } catch (err) {
         console.error('Dashboard load error:', err);
+        showDashboardLoading(false);
         showError('Failed to load dashboard: ' + err.message);
     }
 }
