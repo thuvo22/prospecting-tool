@@ -370,6 +370,7 @@ async function loadDashboard(page = 1) {
     const filterZip = document.getElementById('filterZip').value;
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
+    const filterEmployees = document.getElementById('filterEmployees').value;
     
     // Update current page
     state.dashboardPage = page;
@@ -396,6 +397,16 @@ async function loadDashboard(page = 1) {
             }
             if (filterZip) {
                 companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
+            }
+            
+            // Filter by employee count
+            if (filterEmployees) {
+                const maxEmployees = parseInt(filterEmployees);
+                companies = companies.filter(c => {
+                    // If no employee count, include it (unknown size)
+                    if (!c.employeeCount) return true;
+                    return c.employeeCount < maxEmployees;
+                });
             }
             
             // Filter by eligibility
