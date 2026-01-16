@@ -375,7 +375,7 @@ async function loadDashboard() {
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, 1000);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, 5000);
         showDashboardLoading(true, 'Processing data...', 70);
         
         if (result.ok && result.companies) {
