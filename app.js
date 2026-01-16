@@ -627,30 +627,31 @@ document.getElementById('applyFiltersBtn').addEventListener('click', loadDashboa
 document.getElementById('exportDashboardBtn').addEventListener('click', exportDashboardCSV);
 document.getElementById('enrichDashboardBtn').addEventListener('click', enrichDashboardCompanies);
 
-// Stat card click handlers
-document.querySelectorAll('.stat-card').forEach(card => {
-    card.addEventListener('click', () => {
-        const filter = card.dataset.filter;
-        
-        // Update active state
-        document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-        
-        // Set the filter dropdown
-        const filterEligible = document.getElementById('filterEligible');
-        if (filter === 'all') {
-            filterEligible.value = 'all';
-        } else if (filter === 'eligible') {
-            filterEligible.value = 'eligible';
-        } else if (filter === 'email') {
-            filterEligible.value = 'email';
-        } else if (filter === 'phone') {
-            filterEligible.value = 'phone';
-        }
-        
-        // Load dashboard with filter
-        loadDashboard();
-    });
+// Stat card click handlers - use event delegation
+document.getElementById('dashStatCards').addEventListener('click', (e) => {
+    const card = e.target.closest('.stat-card');
+    if (!card) return;
+    
+    const filter = card.dataset.filter;
+    
+    // Update active state
+    document.querySelectorAll('.stat-card').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+    
+    // Set the filter dropdown
+    const filterEligible = document.getElementById('filterEligible');
+    if (filter === 'all') {
+        filterEligible.value = 'all';
+    } else if (filter === 'eligible') {
+        filterEligible.value = 'eligible';
+    } else if (filter === 'email') {
+        filterEligible.value = 'email';
+    } else if (filter === 'phone') {
+        filterEligible.value = 'phone';
+    }
+    
+    // Load dashboard with filter
+    loadDashboard();
 });
 
 async function enrichDashboardCompanies() {
