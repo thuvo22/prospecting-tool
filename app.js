@@ -237,10 +237,17 @@ function renderResults() {
     const tbody = document.getElementById('resultsBody');
     if (state.companies.length === 0) {
         tbody.innerHTML = `<tr><td colspan="9" class="text-center text-muted py-5"><i class="bi bi-search" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">Select cities and company type, then click Search</p></td></tr>`;
+        document.getElementById('resultEmailCount').textContent = '0';
         return;
     }
     tbody.innerHTML = state.companies.map((c, i) => renderCompanyRow(c, i)).join('');
     document.getElementById('resultCount').textContent = state.companies.length;
+    
+    // Count emails found
+    const emailCount = state.companies.reduce((sum, c) => {
+        return sum + (c.contacts?.filter(con => con.email && con.emailValid !== false).length || 0);
+    }, 0);
+    document.getElementById('resultEmailCount').innerHTML = `<i class="bi bi-envelope-fill me-1"></i>${emailCount}`;
     
     const pendingCount = state.companies.filter(c => !c.enriched).length;
     const enrichAllBtn = document.getElementById('enrichAllBtn');
