@@ -351,7 +351,7 @@ async function loadDashboard() {
     try {
         // Determine enriched filter for API call
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
-        const result = await fetchSavedCompanies(filterType, enrichedParam, 500);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, 1000);
         
         if (result.ok && result.companies) {
             let companies = result.companies;
