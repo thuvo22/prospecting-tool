@@ -337,13 +337,21 @@
                             </div>
                             <div class="col-md-2">
                                 <select id="filterEligible" class="form-select">
-                                    <option value="eligible">Eligible Only</option>
                                     <option value="all">All Companies</option>
+                                    <option value="eligible">Eligible Only</option>
                                     <option value="email">Has Valid Email</option>
                                     <option value="phone">Has Phone</option>
                                 </select>
                             </div>
+                            <div class="col-md-2">
+                                <select id="filterEnriched" class="form-select">
+                                    <option value="">All</option>
+                                    <option value="true">Enriched</option>
+                                    <option value="false">Not Enriched</option>
+                                </select>
+                            </div>
                             <div class="col-auto"><button id="applyFiltersBtn" class="btn btn-primary"><i class="bi bi-funnel me-1"></i> Apply</button></div>
+                            <div class="col-auto"><button id="enrichDashboardBtn" class="btn btn-outline-warning d-none"><i class="bi bi-magic me-1"></i> Enrich All</button></div>
                             <div class="col-auto"><button id="exportDashboardBtn" class="btn btn-outline-success"><i class="bi bi-download me-1"></i> Export</button></div>
                         </div>
                     </div>

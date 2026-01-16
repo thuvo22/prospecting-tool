@@ -346,9 +346,12 @@ async function loadDashboard() {
     const filterCity = document.getElementById('filterCity').value;
     const filterZip = document.getElementById('filterZip').value;
     const filterEligible = document.getElementById('filterEligible').value;
+    const filterEnriched = document.getElementById('filterEnriched').value;
     
     try {
-        const result = await fetchSavedCompanies(filterType, true, 500);
+        // Determine enriched filter for API call
+        const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
+        const result = await fetchSavedCompanies(filterType, enrichedParam, 500);
         
         if (result.ok && result.companies) {
             let companies = result.companies;
@@ -378,10 +381,25 @@ async function loadDashboard() {
             renderDashboard();
             
             // Update stats
-            document.getElementById('dashTotalCompanies').textContent = result.companies.length;
-            document.getElementById('dashEligible').textContent = companies.length;
-            document.getElementById('dashWithEmail').textContent = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false)).length;
-            document.getElementById('dashWithPhone').textContent = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone).length;
+            const allCompanies = result.companies;
+            document.getElementById('dashTotalCompanies').textContent = allCompanies.length;
+            
+            const notEnrichedCount = allCompanies.filter(c => !c.enriched).length;
+            const enrichBtn = document.getElementById('enrichDashboardBtn');
+            if (notEnrichedCount > 0 && filterEnriched === 'false') {
+                enrichBtn.classList.remove('d-none');
+                enrichBtn.innerHTML = `<i class="bi bi-magic me-1"></i> Enrich All (${companies.length})`;
+            } else {
+                enrichBtn.classList.add('d-none');
+            }
+            
+            document.getElementById('dashEligible').textContent = allCompanies.filter(c => {
+                const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
+                const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
+                return hasValidEmail || hasPhone;
+            }).length;
+            document.getElementById('dashWithEmail').textContent = allCompanies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false)).length;
+            document.getElementById('dashWithPhone').textContent = allCompanies.filter(c => c.contacts?.some(con => con.phone) || c.phone).length;
         }
     } catch (err) {
         console.error('Dashboard load error:', err);
@@ -400,7 +418,7 @@ function renderDashboard() {
     
     document.getElementById('dashResultCount').textContent = state.dashboardCompanies.length;
     
-    tbody.innerHTML = state.dashboardCompanies.map(c => {
+    tbody.innerHTML = state.dashboardCompanies.map((c, idx) => {
         const contact = c.contacts?.[0];
         const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
         const phoneContact = c.contacts?.find(con => con.phone);
@@ -412,8 +430,12 @@ function renderDashboard() {
         const source = c.primarySource || contact?.source || '';
         const sourceBadge = source ? `<span class="source-badge source-${source === 'apollo' ? 'apollo' : 'scrape'}">${source}</span>` : '';
         
+        const enrichedBadge = c.enriched 
+            ? '<span class="badge bg-success">Enriched</span>' 
+            : '<span class="badge bg-secondary">Pending</span>';
+        
         return `
-            <tr>
+            <tr data-place-id="${c.placeId}">
                 <td><strong>${c.companyName}</strong>${c.website ? `<br><a href="${c.website}" target="_blank" class="small text-muted">${c.domain || 'website'}</a>` : ''}</td>
                 <td><small>${c.companyType?.replace('_', ' ') || '-'}</small></td>
                 <td><small>${city}<br>${zip}</small></td>
@@ -421,7 +443,7 @@ function renderDashboard() {
                 <td>${contact?.name || '-'}${contact?.title ? `<br><small class="text-muted">${contact.title}</small>` : ''}</td>
                 <td class="contact-info">${emailContact ? `<a href="mailto:${emailContact.email}" class="email">${emailContact.email}</a>` : '-'}</td>
                 <td class="contact-info">${phone ? `<span class="phone">${phone}</span>` : '-'}</td>
-                <td>${sourceBadge}</td>
+                <td>${enrichedBadge} ${sourceBadge}</td>
             </tr>`;
     }).join('');
 }
@@ -603,6 +625,60 @@ document.getElementById('selectAll').addEventListener('change', (e) => {
 document.getElementById('refreshStatsBtn').addEventListener('click', updateDbStats);
 document.getElementById('applyFiltersBtn').addEventListener('click', loadDashboard);
 document.getElementById('exportDashboardBtn').addEventListener('click', exportDashboardCSV);
+document.getElementById('enrichDashboardBtn').addEventListener('click', enrichDashboardCompanies);
+
+async function enrichDashboardCompanies() {
+    const pending = state.dashboardCompanies.filter(c => !c.enriched);
+    if (pending.length === 0) return;
+    
+    const btn = document.getElementById('enrichDashboardBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Enriching...';
+    
+    showStepProgress(`Enriching ${pending.length} companies...`);
+    updateStep('places', 'done', 'From DB');
+    updateStep('apollo', 'active', 'Starting...');
+    
+    let enriched = 0;
+    for (const company of pending) {
+        try {
+            const result = await apiCall('/prospecting/enrich-company', 'POST', {
+                placeId: company.placeId,
+                companyName: company.companyName,
+                website: company.website,
+                companyType: company.companyType
+            });
+            
+            if (result.ok) {
+                company.enriched = true;
+                company.contacts = result.contacts;
+                company.primarySource = result.primarySource;
+                enriched++;
+            }
+        } catch (err) {
+            console.error('Enrich error:', err);
+        }
+        
+        const progress = ((enriched) / pending.length) * 100;
+        setStepProgress(progress, `${enriched} / ${pending.length}`);
+        updateStep('apollo', 'active', `${enriched} done`);
+        
+        // Small delay to avoid rate limiting
+        await new Promise(r => setTimeout(r, 500));
+    }
+    
+    updateStep('apollo', 'done', `${enriched} enriched`);
+    updateStep('scraper', 'done', 'Complete');
+    updateStep('hunter', 'done', 'Validated');
+    setStepProgress(100, `Done! ${enriched} enriched`);
+    
+    hideStepProgress();
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-magic me-1"></i> Enrich All';
+    
+    await updateDbStats();
+    await loadDashboard();
+}
 
 // Tab change handler
 document.querySelectorAll('#mainTabs .nav-link').forEach(tab => {
