@@ -741,7 +741,7 @@ document.getElementById('selectAll').addEventListener('change', (e) => {
     document.querySelectorAll('.row-select').forEach(cb => cb.checked = e.target.checked);
 });
 document.getElementById('refreshStatsBtn').addEventListener('click', updateDbStats);
-document.getElementById('applyFiltersBtn').addEventListener('click', loadDashboard);
+document.getElementById('applyFiltersBtn').addEventListener('click', () => loadDashboard(1));
 document.getElementById('exportDashboardBtn').addEventListener('click', exportDashboardCSV);
 document.getElementById('enrichDashboardBtn').addEventListener('click', enrichDashboardCompanies);
 
