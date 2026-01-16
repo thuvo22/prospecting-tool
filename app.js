@@ -20,7 +20,11 @@ let state = {
     stats: { companies: 0, contacts: 0, emails: 0, phones: 0 },
     isSearching: false,
     isEnriching: false,
-    enrichStats: { apollo: 0, scraper: 0, hunter: 0 }
+    enrichStats: { apollo: 0, scraper: 0, hunter: 0 },
+    // Pagination
+    dashboardPage: 1,
+    dashboardPageSize: 50,
+    dashboardTotal: 0
 };
 
 // ==================== UTILS ====================
@@ -360,12 +364,16 @@ function showDashboardLoading(show, text = 'Loading companies...', percent = 0) 
     }
 }
 
-async function loadDashboard() {
+async function loadDashboard(page = 1) {
     const filterType = document.getElementById('filterType').value;
     const filterCity = document.getElementById('filterCity').value;
     const filterZip = document.getElementById('filterZip').value;
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
+    
+    // Update current page
+    state.dashboardPage = page;
+    const skip = (page - 1) * state.dashboardPageSize;
     
     // Show loading bar
     showDashboardLoading(true, 'Fetching companies from database...', 10);
@@ -375,13 +383,14 @@ async function loadDashboard() {
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, 5000);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, state.dashboardPageSize, skip);
         showDashboardLoading(true, 'Processing data...', 70);
         
         if (result.ok && result.companies) {
             let companies = result.companies;
+            state.dashboardTotal = result.total || companies.length;
             
-            // Apply filters
+            // Apply client-side filters (city, zip, eligibility still need filtering)
             if (filterCity) {
                 companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
             }
@@ -405,28 +414,20 @@ async function loadDashboard() {
             state.dashboardCompanies = companies;
             showDashboardLoading(true, `Rendering ${companies.length} companies...`, 90);
             renderDashboard();
+            renderPagination();
             showDashboardLoading(false);
             
-            // Update stats
-            const allCompanies = result.companies;
-            document.getElementById('dashTotalCompanies').textContent = allCompanies.length;
+            // Update stats from API response
+            document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
             
-            const notEnrichedCount = allCompanies.filter(c => !c.enriched).length;
+            // Show enrich button only when viewing not-enriched companies
             const enrichBtn = document.getElementById('enrichDashboardBtn');
-            if (notEnrichedCount > 0 && filterEnriched === 'false') {
+            if (filterEnriched === 'false' && companies.length > 0) {
                 enrichBtn.classList.remove('d-none');
                 enrichBtn.innerHTML = `<i class="bi bi-magic me-1"></i> Enrich All (${companies.length})`;
             } else {
                 enrichBtn.classList.add('d-none');
             }
-            
-            document.getElementById('dashEligible').textContent = allCompanies.filter(c => {
-                const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
-                const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
-                return hasValidEmail || hasPhone;
-            }).length;
-            document.getElementById('dashWithEmail').textContent = allCompanies.reduce((sum, c) => sum + (c.contacts?.filter(con => con.email && con.emailValid !== false).length || 0), 0);
-            document.getElementById('dashWithPhone').textContent = allCompanies.filter(c => c.contacts?.some(con => con.phone) || c.phone).length;
         }
     } catch (err) {
         console.error('Dashboard load error:', err);
@@ -474,6 +475,61 @@ function renderDashboard() {
                 <td>${enrichedBadge} ${sourceBadge}</td>
             </tr>`;
     }).join('');
+}
+
+function renderPagination() {
+    const container = document.getElementById('paginationContainer');
+    if (!container) return;
+    
+    const totalPages = Math.ceil(state.dashboardTotal / state.dashboardPageSize);
+    const currentPage = state.dashboardPage;
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<nav><ul class="pagination pagination-sm mb-0 justify-content-center">';
+    
+    // Previous button
+    html += `<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadDashboard(${currentPage - 1}); return false;">«</a>
+    </li>`;
+    
+    // Page numbers
+    const maxVisible = 7;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
+    
+    if (endPage - startPage < maxVisible - 1) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+    }
+    
+    if (startPage > 1) {
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadDashboard(1); return false;">1</a></li>`;
+        if (startPage > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<li class="page-item ${i === currentPage ? 'active' : ''}">
+            <a class="page-link" href="#" onclick="loadDashboard(${i}); return false;">${i}</a>
+        </li>`;
+    }
+    
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        html += `<li class="page-item"><a class="page-link" href="#" onclick="loadDashboard(${totalPages}); return false;">${totalPages}</a></li>`;
+    }
+    
+    // Next button
+    html += `<li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+        <a class="page-link" href="#" onclick="loadDashboard(${currentPage + 1}); return false;">»</a>
+    </li>`;
+    
+    html += '</ul></nav>';
+    html += `<div class="text-center text-muted small mt-2">Showing ${(currentPage - 1) * state.dashboardPageSize + 1}-${Math.min(currentPage * state.dashboardPageSize, state.dashboardTotal)} of ${state.dashboardTotal}</div>`;
+    
+    container.innerHTML = html;
 }
 
 function exportDashboardCSV() {
