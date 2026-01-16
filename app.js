@@ -142,6 +142,17 @@ async function updateDbStats() {
     } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
+async function updateDashboardStats() {
+    try {
+        const result = await fetchProspectingStats();
+        if (result.ok) {
+            document.getElementById('dashEligible').textContent = result.eligibleCompanies || 0;
+            document.getElementById('dashWithEmail').textContent = result.totalEmails || 0;
+            document.getElementById('dashWithPhone').textContent = result.withPhone || 0;
+        }
+    } catch (e) { console.error('Failed to fetch dashboard stats:', e); }
+}
+
 // ==================== UI FUNCTIONS ====================
 function showLoginScreen() {
     document.getElementById('loginScreen').classList.remove('d-none');
@@ -430,6 +441,9 @@ async function loadDashboard(page = 1) {
             
             // Update stats from API response
             document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
+            
+            // Load dashboard stats from stats endpoint
+            updateDashboardStats();
             
             // Show enrich button only when viewing not-enriched companies
             const enrichBtn = document.getElementById('enrichDashboardBtn');
