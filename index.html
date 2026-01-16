@@ -86,6 +86,10 @@
         .filter-bar { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .filter-bar .form-control, .filter-bar .form-select { font-size: 0.875rem; }
         
+        .stat-card { cursor: pointer; transition: all 0.2s ease; border: 2px solid transparent; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .stat-card.active { border-color: var(--primary-color); background: #f0f9ff; }
+        
         .valid-badge { font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; margin-left: 3px; }
         .valid-yes { background: #d1fae5; color: #065f46; }
         .valid-no { background: #fee2e2; color: #991b1b; }
@@ -309,11 +313,11 @@
             <!-- Dashboard Tab -->
             <div class="tab-pane fade" id="dashboardTab">
                 <div class="container-fluid py-4">
-                    <div class="row mb-4">
-                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-primary" id="dashTotalCompanies">0</div><div class="label">Total Companies</div></div></div>
-                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-success" id="dashEligible">0</div><div class="label">Eligible Leads</div></div></div>
-                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-info" id="dashWithEmail">0</div><div class="label">With Valid Email</div></div></div>
-                        <div class="col-md-3"><div class="card text-center p-4"><div class="number text-warning" id="dashWithPhone">0</div><div class="label">With Phone</div></div></div>
+                    <div class="row mb-4" id="dashStatCards">
+                        <div class="col-md-3"><div class="card text-center p-4 stat-card" data-filter="all" role="button"><div class="number text-primary" id="dashTotalCompanies">0</div><div class="label">Total Companies</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4 stat-card" data-filter="eligible" role="button"><div class="number text-success" id="dashEligible">0</div><div class="label">Eligible Leads</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4 stat-card" data-filter="email" role="button"><div class="number text-info" id="dashWithEmail">0</div><div class="label">With Valid Email</div></div></div>
+                        <div class="col-md-3"><div class="card text-center p-4 stat-card" data-filter="phone" role="button"><div class="number text-warning" id="dashWithPhone">0</div><div class="label">With Phone</div></div></div>
                     </div>
                     
                     <div class="filter-bar">
