@@ -398,7 +398,7 @@ async function loadDashboard() {
                 const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
                 return hasValidEmail || hasPhone;
             }).length;
-            document.getElementById('dashWithEmail').textContent = allCompanies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false)).length;
+            document.getElementById('dashWithEmail').textContent = allCompanies.reduce((sum, c) => sum + (c.contacts?.filter(con => con.email && con.emailValid !== false).length || 0), 0);
             document.getElementById('dashWithPhone').textContent = allCompanies.filter(c => c.contacts?.some(con => con.phone) || c.phone).length;
         }
     } catch (err) {
