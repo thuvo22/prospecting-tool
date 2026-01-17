@@ -325,6 +325,12 @@ async function enrichSingleCompany(index) {
         
         const result = await enrichCompany(company);
         
+        // Check for credit error from Apollo
+        if (result.creditError) {
+            console.error('Apollo credit error detected');
+            return { creditError: true };
+        }
+        
         if (result.ok) {
             company.enriched = true;
             company.contacts = result.contacts;
@@ -364,6 +370,7 @@ async function enrichAllCompanies() {
     updateStep('apollo', 'active', 'Starting...');
     
     let cachedCount = 0, newCount = 0;
+    let creditError = false;
     
     for (let i = 0; i < state.companies.length; i++) {
         if (state.companies[i].enriched) continue;
@@ -376,6 +383,15 @@ async function enrichAllCompanies() {
         updateStep('scraper', state.enrichStats.scraper > 0 ? 'done' : 'pending', `${state.enrichStats.scraper} scraped`);
         
         const result = await enrichSingleCompany(i);
+        
+        // Check for credit error - stop enrichment
+        if (result?.creditError) {
+            creditError = true;
+            updateStep('apollo', 'error', 'Credits exhausted!');
+            alert('⚠️ Apollo credits exhausted! Stopping enrichment. Please check your Apollo account.');
+            break;
+        }
+        
         if (result?.cached) cachedCount++;
         else newCount++;
         
@@ -383,10 +399,14 @@ async function enrichAllCompanies() {
     }
     
     // Final step updates
-    updateStep('apollo', 'done', `${state.enrichStats.apollo} contacts`);
-    updateStep('scraper', state.enrichStats.scraper > 0 ? 'done' : 'pending', `${state.enrichStats.scraper} scraped`);
-    updateStep('hunter', 'done', 'Validated');
-    setStepProgress(100, `Done! ${cachedCount} cached, ${newCount} new`);
+    if (!creditError) {
+        updateStep('apollo', 'done', `${state.enrichStats.apollo} contacts`);
+        updateStep('scraper', state.enrichStats.scraper > 0 ? 'done' : 'pending', `${state.enrichStats.scraper} scraped`);
+        updateStep('hunter', 'done', 'Validated');
+        setStepProgress(100, `Done! ${cachedCount} cached, ${newCount} new`);
+    } else {
+        setStepProgress(100, `Stopped! ${cachedCount} cached, ${newCount} new (credit error)`);
+    }
     
     hideStepProgress();
     state.isEnriching = false;
