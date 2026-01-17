@@ -14,6 +14,7 @@ let state = {
     isLoggedIn: false,
     authToken: null,
     selectedCities: [],
+    allCities: [], // Store all available cities
     companies: [],
     dashboardCompanies: [],
     fetchedPlaceIds: new Set(),
@@ -181,12 +182,44 @@ function addCityTag(city) {
     tag.dataset.city = city.name;
     tag.innerHTML = `${city.displayName}<span class="remove" onclick="removeCity('${city.name}')">&times;</span>`;
     container.appendChild(tag);
+    updateCitySelectionUI();
 }
 
 function removeCity(cityName) {
     state.selectedCities = state.selectedCities.filter(c => c !== cityName);
     const tag = document.querySelector(`.city-tag[data-city="${cityName}"]`);
     if (tag) tag.remove();
+    updateCitySelectionUI();
+}
+
+function selectAllCities() {
+    // Clear existing selections first
+    clearAllCities();
+    // Add all cities
+    state.allCities.forEach(city => addCityTag(city));
+    updateCitySelectionUI();
+}
+
+function clearAllCities() {
+    state.selectedCities = [];
+    document.getElementById('selectedCities').innerHTML = '';
+    updateCitySelectionUI();
+}
+
+function updateCitySelectionUI() {
+    const allCitiesSelected = state.allCities.length > 0 && state.selectedCities.length === state.allCities.length;
+    const selectAllBtn = document.getElementById('selectAllCitiesBtn');
+    const clearAllBtn = document.getElementById('clearAllCitiesBtn');
+    
+    if (selectAllBtn) {
+        selectAllBtn.disabled = allCitiesSelected;
+        selectAllBtn.innerHTML = allCitiesSelected 
+            ? '<i class="bi bi-check-all me-1"></i>All Selected' 
+            : '<i class="bi bi-check-all me-1"></i>All Cities';
+    }
+    if (clearAllBtn) {
+        clearAllBtn.classList.toggle('d-none', state.selectedCities.length === 0);
+    }
 }
 
 function renderCompanyRow(company, index) {
@@ -844,6 +877,7 @@ document.querySelectorAll('#mainTabs .nav-link').forEach(tab => {
 async function initApp() {
     try {
         const cities = await fetchCities();
+        state.allCities = cities; // Store all cities in state
         const citySelect = document.getElementById('citySelect');
         const filterCitySelect = document.getElementById('filterCity');
         cities.forEach(city => {
@@ -859,6 +893,12 @@ async function initApp() {
             filterOption.textContent = city.displayName;
             filterCitySelect.appendChild(filterOption);
         });
+        
+        // Setup city selection buttons
+        document.getElementById('selectAllCitiesBtn')?.addEventListener('click', selectAllCities);
+        document.getElementById('clearAllCitiesBtn')?.addEventListener('click', clearAllCities);
+        updateCitySelectionUI();
+        
         await updateDbStats();
     } catch (err) {
         console.error('Failed to init:', err);
