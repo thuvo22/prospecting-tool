@@ -127,10 +127,11 @@ async function fetchProspectingStats(companyType = null) {
     return await apiCall(url);
 }
 
-async function fetchSavedCompanies(companyType = null, enriched = null, limit = 100, skip = 0) {
+async function fetchSavedCompanies(companyType = null, enriched = null, maxEmployees = null, limit = 100, skip = 0) {
     let url = `/prospecting/saved-companies?limit=${limit}&skip=${skip}`;
     if (companyType) url += `&companyType=${encodeURIComponent(companyType)}`;
     if (enriched !== null) url += `&enriched=${enriched}`;
+    if (maxEmployees !== null) url += `&maxEmployees=${maxEmployees}`;
     return await apiCall(url);
 }
 
@@ -455,10 +456,11 @@ async function loadDashboard(page = 1) {
     try {
         // Determine enriched filter for API call
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
-        console.log('loadDashboard - filterEnriched:', filterEnriched, 'enrichedParam:', enrichedParam);
+        const maxEmployeesParam = filterEmployees ? parseInt(filterEmployees) : null;
+        console.log('loadDashboard - filterEnriched:', filterEnriched, 'enrichedParam:', enrichedParam, 'maxEmployees:', maxEmployeesParam);
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, state.dashboardPageSize, skip);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, maxEmployeesParam, state.dashboardPageSize, skip);
         console.log('loadDashboard - API returned:', result.total, 'companies');
         showDashboardLoading(true, 'Processing data...', 70);
         
@@ -474,15 +476,7 @@ async function loadDashboard(page = 1) {
                 companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
             }
             
-            // Filter by employee count
-            if (filterEmployees) {
-                const maxEmployees = parseInt(filterEmployees);
-                companies = companies.filter(c => {
-                    // If no employee count, include it (unknown size)
-                    if (!c.employeeCount) return true;
-                    return c.employeeCount < maxEmployees;
-                });
-            }
+            // Note: Employee filter is now server-side
             
             // Filter by eligibility
             if (filterEligible === 'eligible') {
@@ -639,7 +633,8 @@ async function exportDashboardCSV() {
     try {
         // Fetch ALL matching companies (up to 5000)
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
-        const result = await fetchSavedCompanies(filterType, enrichedParam, 5000, 0);
+        const maxEmployeesParam = filterEmployees ? parseInt(filterEmployees) : null;
+        const result = await fetchSavedCompanies(filterType, enrichedParam, maxEmployeesParam, 5000, 0);
         
         if (!result.ok || !result.companies || result.companies.length === 0) {
             showError('No data to export');
@@ -648,17 +643,14 @@ async function exportDashboardCSV() {
         
         let companies = result.companies;
         
-        // Apply client-side filters
+        // Apply client-side filters (city, zip, eligibility)
         if (filterCity) {
             companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
         }
         if (filterZip) {
             companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
         }
-        if (filterEmployees) {
-            const maxEmployees = parseInt(filterEmployees);
-            companies = companies.filter(c => !c.employeeCount || c.employeeCount < maxEmployees);
-        }
+        // Note: Employee filter is now server-side
         if (filterEligible === 'eligible') {
             companies = companies.filter(c => {
                 const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
