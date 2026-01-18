@@ -121,9 +121,12 @@ async function getPlaceDetails(placeId) {
     return await apiCall(`/prospecting/place-details/${placeId}`);
 }
 
-async function fetchProspectingStats(companyType = null) {
+async function fetchProspectingStats(companyType = null, maxEmployees = null) {
     let url = '/prospecting/prospecting-stats';
-    if (companyType) url += `?companyType=${encodeURIComponent(companyType)}`;
+    const params = [];
+    if (companyType) params.push(`companyType=${encodeURIComponent(companyType)}`);
+    if (maxEmployees !== null) params.push(`maxEmployees=${maxEmployees}`);
+    if (params.length > 0) url += '?' + params.join('&');
     return await apiCall(url);
 }
 
@@ -146,9 +149,9 @@ async function updateDbStats() {
     } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
-async function updateDashboardStats(companyType = null) {
+async function updateDashboardStats(companyType = null, maxEmployees = null) {
     try {
-        const result = await fetchProspectingStats(companyType);
+        const result = await fetchProspectingStats(companyType, maxEmployees);
         if (result.ok) {
             document.getElementById('dashEligible').textContent = result.eligibleCompanies || 0;
             document.getElementById('dashWithEmail').textContent = result.totalEmails || 0;
@@ -500,8 +503,8 @@ async function loadDashboard(page = 1) {
             // Update stats from API response
             document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
             
-            // Load dashboard stats from stats endpoint (filtered by company type)
-            updateDashboardStats(filterType || null);
+            // Load dashboard stats from stats endpoint (filtered by company type and employees)
+            updateDashboardStats(filterType || null, maxEmployeesParam);
             
             // Show enrich button only when viewing not-enriched companies
             const enrichBtn = document.getElementById('enrichDashboardBtn');
