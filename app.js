@@ -121,8 +121,10 @@ async function getPlaceDetails(placeId) {
     return await apiCall(`/prospecting/place-details/${placeId}`);
 }
 
-async function fetchProspectingStats() {
-    return await apiCall('/prospecting/prospecting-stats');
+async function fetchProspectingStats(companyType = null) {
+    let url = '/prospecting/prospecting-stats';
+    if (companyType) url += `?companyType=${encodeURIComponent(companyType)}`;
+    return await apiCall(url);
 }
 
 async function fetchSavedCompanies(companyType = null, enriched = null, limit = 100, skip = 0) {
@@ -143,9 +145,9 @@ async function updateDbStats() {
     } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
-async function updateDashboardStats() {
+async function updateDashboardStats(companyType = null) {
     try {
-        const result = await fetchProspectingStats();
+        const result = await fetchProspectingStats(companyType);
         if (result.ok) {
             document.getElementById('dashEligible').textContent = result.eligibleCompanies || 0;
             document.getElementById('dashWithEmail').textContent = result.totalEmails || 0;
@@ -504,8 +506,8 @@ async function loadDashboard(page = 1) {
             // Update stats from API response
             document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
             
-            // Load dashboard stats from stats endpoint
-            updateDashboardStats();
+            // Load dashboard stats from stats endpoint (filtered by company type)
+            updateDashboardStats(filterType || null);
             
             // Show enrich button only when viewing not-enriched companies
             const enrichBtn = document.getElementById('enrichDashboardBtn');
@@ -619,44 +621,103 @@ function renderPagination() {
     container.innerHTML = html;
 }
 
-function exportDashboardCSV() {
-    if (state.dashboardCompanies.length === 0) {
-        showError('No data to export');
-        return;
+async function exportDashboardCSV() {
+    // Get current filters
+    const filterType = document.getElementById('filterType').value;
+    const filterCity = document.getElementById('filterCity').value;
+    const filterZip = document.getElementById('filterZip').value;
+    const filterEligible = document.getElementById('filterEligible').value;
+    const filterEnriched = document.getElementById('filterEnriched').value;
+    const filterEmployees = document.getElementById('filterEmployees').value;
+    
+    // Show loading state
+    const exportBtn = document.getElementById('exportDashboardBtn');
+    const originalText = exportBtn.innerHTML;
+    exportBtn.disabled = true;
+    exportBtn.innerHTML = '<span class="loading-spinner me-1"></span> Exporting...';
+    
+    try {
+        // Fetch ALL matching companies (up to 5000)
+        const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
+        const result = await fetchSavedCompanies(filterType, enrichedParam, 5000, 0);
+        
+        if (!result.ok || !result.companies || result.companies.length === 0) {
+            showError('No data to export');
+            return;
+        }
+        
+        let companies = result.companies;
+        
+        // Apply client-side filters
+        if (filterCity) {
+            companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
+        }
+        if (filterZip) {
+            companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
+        }
+        if (filterEmployees) {
+            const maxEmployees = parseInt(filterEmployees);
+            companies = companies.filter(c => !c.employeeCount || c.employeeCount < maxEmployees);
+        }
+        if (filterEligible === 'eligible') {
+            companies = companies.filter(c => {
+                const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
+                const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
+                return hasValidEmail || hasPhone;
+            });
+        } else if (filterEligible === 'email') {
+            companies = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false));
+        } else if (filterEligible === 'phone') {
+            companies = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone);
+        }
+        
+        if (companies.length === 0) {
+            showError('No data to export after filtering');
+            return;
+        }
+        
+        const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
+        
+        const rows = companies.map(c => {
+            const contact = c.contacts?.[0];
+            const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
+            const phone = c.contacts?.find(con => con.phone)?.phone || c.phone || '';
+            return [
+                c.companyName || '',
+                c.companyType || '',
+                c.searchedCities?.[0] || '',
+                c.foundInZip || '',
+                (c.address || '').replace(/,/g, ';'),
+                c.rating || '',
+                c.reviewCount || '',
+                c.website || '',
+                contact?.name || '',
+                contact?.title || '',
+                emailContact?.email || '',
+                phone,
+                c.primarySource || ''
+            ];
+        });
+        
+        const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.setAttribute('href', URL.createObjectURL(blob));
+        const filename = `leads_${filterType || 'all'}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        alert(`Exported ${companies.length} companies to ${filename}`);
+    } catch (err) {
+        console.error('Export error:', err);
+        showError('Export failed: ' + err.message);
+    } finally {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = originalText;
     }
-    
-    const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
-    
-    const rows = state.dashboardCompanies.map(c => {
-        const contact = c.contacts?.[0];
-        const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
-        const phone = c.contacts?.find(con => con.phone)?.phone || c.phone || '';
-        return [
-            c.companyName || '',
-            c.companyType || '',
-            c.searchedCities?.[0] || '',
-            c.foundInZip || '',
-            (c.address || '').replace(/,/g, ';'),
-            c.rating || '',
-            c.reviewCount || '',
-            c.website || '',
-            contact?.name || '',
-            contact?.title || '',
-            emailContact?.email || '',
-            phone,
-            c.primarySource || ''
-        ];
-    });
-    
-    const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.setAttribute('href', URL.createObjectURL(blob));
-    link.setAttribute('download', `eligible_leads_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 function exportToCSV() {
