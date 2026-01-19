@@ -739,26 +739,51 @@ async function exportDashboardCSV() {
         
         const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
         
-        const rows = companies.map(c => {
-            const contact = c.contacts?.[0];
-            const emailContact = c.contacts?.find(con => con.email && con.emailValid !== false);
-            const phone = c.contacts?.find(con => con.phone)?.phone || c.phone || '';
-            return [
-                c.companyName || '',
-                c.companyType || '',
-                c.searchedCities?.[0] || '',
-                c.foundInZip || '',
-                (c.address || '').replace(/,/g, ';'),
-                c.rating || '',
-                c.reviewCount || '',
-                c.website || '',
-                contact?.name || '',
-                contact?.title || '',
-                emailContact?.email || '',
-                phone,
-                c.primarySource || ''
-            ];
-        });
+        // Create one row per contact (not per company) to export ALL emails
+        const rows = [];
+        for (const c of companies) {
+            const validContacts = c.contacts?.filter(con => con.email && con.emailValid !== false) || [];
+            
+            if (validContacts.length === 0) {
+                // Company with no valid email contacts - still include it with empty email
+                rows.push([
+                    c.companyName || '',
+                    c.companyType || '',
+                    c.searchedCities?.[0] || '',
+                    c.foundInZip || '',
+                    (c.address || '').replace(/,/g, ';'),
+                    c.rating || '',
+                    c.reviewCount || '',
+                    c.website || '',
+                    '',
+                    '',
+                    '',
+                    c.phone || '',
+                    c.primarySource || ''
+                ]);
+            } else {
+                // One row per contact with email
+                for (const contact of validContacts) {
+                    rows.push([
+                        c.companyName || '',
+                        c.companyType || '',
+                        c.searchedCities?.[0] || '',
+                        c.foundInZip || '',
+                        (c.address || '').replace(/,/g, ';'),
+                        c.rating || '',
+                        c.reviewCount || '',
+                        c.website || '',
+                        contact.name || '',
+                        contact.title || '',
+                        contact.email || '',
+                        contact.phone || c.phone || '',
+                        contact.source || c.primarySource || ''
+                    ]);
+                }
+            }
+        }
+        
+        console.log('Export: ', companies.length, 'companies,', rows.length, 'total rows (contacts)');
         
         const csvContent = [headers.join(','), ...rows.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -771,7 +796,7 @@ async function exportDashboardCSV() {
         link.click();
         document.body.removeChild(link);
         
-        alert(`Exported ${companies.length} companies to ${filename}`);
+        alert(`Exported ${rows.length} contacts from ${companies.length} companies to ${filename}`);
     } catch (err) {
         console.error('Export error:', err);
         showError('Export failed: ' + err.message);
