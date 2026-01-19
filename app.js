@@ -131,12 +131,14 @@ async function fetchProspectingStats(companyType = null, minEmployees = null, ma
     return await apiCall(url);
 }
 
-async function fetchSavedCompanies(companyType = null, enriched = null, minEmployees = null, maxEmployees = null, limit = 100, skip = 0) {
+async function fetchSavedCompanies(companyType = null, enriched = null, minEmployees = null, maxEmployees = null, minReviews = null, maxReviews = null, limit = 100, skip = 0) {
     let url = `/prospecting/saved-companies?limit=${limit}&skip=${skip}`;
     if (companyType) url += `&companyType=${encodeURIComponent(companyType)}`;
     if (enriched !== null) url += `&enriched=${enriched}`;
     if (minEmployees !== null) url += `&minEmployees=${minEmployees}`;
     if (maxEmployees !== null) url += `&maxEmployees=${maxEmployees}`;
+    if (minReviews !== null) url += `&minReviews=${minReviews}`;
+    if (maxReviews !== null) url += `&maxReviews=${maxReviews}`;
     return await apiCall(url);
 }
 
@@ -450,6 +452,7 @@ async function loadDashboard(page = 1) {
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
     const filterEmployees = document.getElementById('filterEmployees').value;
+    const filterReviews = document.getElementById('filterReviews').value;
     
     // Update current page
     state.dashboardPage = page;
@@ -474,10 +477,23 @@ async function loadDashboard(page = 1) {
                 maxEmployeesParam = max;
             }
         }
-        console.log('loadDashboard - filterEnriched:', filterEnriched, 'enrichedParam:', enrichedParam, 'employees:', minEmployeesParam, '-', maxEmployeesParam);
+        
+        // Parse reviews range filter
+        let minReviewsParam = null;
+        let maxReviewsParam = null;
+        if (filterReviews) {
+            if (filterReviews === '500+') {
+                minReviewsParam = 500;
+            } else {
+                const [min, max] = filterReviews.split('-').map(Number);
+                minReviewsParam = min;
+                maxReviewsParam = max;
+            }
+        }
+        console.log('loadDashboard - employees:', minEmployeesParam, '-', maxEmployeesParam, 'reviews:', minReviewsParam, '-', maxReviewsParam);
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, state.dashboardPageSize, skip);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, state.dashboardPageSize, skip);
         console.log('loadDashboard - API returned:', result.total, 'companies');
         showDashboardLoading(true, 'Processing data...', 70);
         
