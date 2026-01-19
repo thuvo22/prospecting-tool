@@ -661,6 +661,7 @@ async function exportDashboardCSV() {
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
     const filterEmployees = document.getElementById('filterEmployees').value;
+    const filterReviews = document.getElementById('filterReviews').value;
     
     // Show loading state
     const exportBtn = document.getElementById('exportDashboardBtn');
@@ -671,8 +672,34 @@ async function exportDashboardCSV() {
     try {
         // Fetch ALL matching companies (up to 5000)
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
-        const maxEmployeesParam = filterEmployees ? parseInt(filterEmployees) : null;
-        const result = await fetchSavedCompanies(filterType, enrichedParam, maxEmployeesParam, 5000, 0);
+        
+        // Parse employee range filter
+        let minEmployeesParam = null;
+        let maxEmployeesParam = null;
+        if (filterEmployees) {
+            if (filterEmployees === '500+') {
+                minEmployeesParam = 500;
+            } else {
+                const [min, max] = filterEmployees.split('-').map(Number);
+                minEmployeesParam = min;
+                maxEmployeesParam = max;
+            }
+        }
+        
+        // Parse reviews range filter
+        let minReviewsParam = null;
+        let maxReviewsParam = null;
+        if (filterReviews) {
+            if (filterReviews === '500+') {
+                minReviewsParam = 500;
+            } else {
+                const [min, max] = filterReviews.split('-').map(Number);
+                minReviewsParam = min;
+                maxReviewsParam = max;
+            }
+        }
+        
+        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, 5000, 0);
         
         if (!result.ok || !result.companies || result.companies.length === 0) {
             showError('No data to export');
@@ -688,7 +715,7 @@ async function exportDashboardCSV() {
         if (filterZip) {
             companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
         }
-        // Note: Employee filter is now server-side
+        // Note: Employee and reviews filters are now server-side
         if (filterEligible === 'eligible') {
             companies = companies.filter(c => {
                 const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
