@@ -121,19 +121,21 @@ async function getPlaceDetails(placeId) {
     return await apiCall(`/prospecting/place-details/${placeId}`);
 }
 
-async function fetchProspectingStats(companyType = null, maxEmployees = null) {
+async function fetchProspectingStats(companyType = null, minEmployees = null, maxEmployees = null) {
     let url = '/prospecting/prospecting-stats';
     const params = [];
     if (companyType) params.push(`companyType=${encodeURIComponent(companyType)}`);
+    if (minEmployees !== null) params.push(`minEmployees=${minEmployees}`);
     if (maxEmployees !== null) params.push(`maxEmployees=${maxEmployees}`);
     if (params.length > 0) url += '?' + params.join('&');
     return await apiCall(url);
 }
 
-async function fetchSavedCompanies(companyType = null, enriched = null, maxEmployees = null, limit = 100, skip = 0) {
+async function fetchSavedCompanies(companyType = null, enriched = null, minEmployees = null, maxEmployees = null, limit = 100, skip = 0) {
     let url = `/prospecting/saved-companies?limit=${limit}&skip=${skip}`;
     if (companyType) url += `&companyType=${encodeURIComponent(companyType)}`;
     if (enriched !== null) url += `&enriched=${enriched}`;
+    if (minEmployees !== null) url += `&minEmployees=${minEmployees}`;
     if (maxEmployees !== null) url += `&maxEmployees=${maxEmployees}`;
     return await apiCall(url);
 }
@@ -149,9 +151,9 @@ async function updateDbStats() {
     } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
-async function updateDashboardStats(companyType = null, maxEmployees = null) {
+async function updateDashboardStats(companyType = null, minEmployees = null, maxEmployees = null) {
     try {
-        const result = await fetchProspectingStats(companyType, maxEmployees);
+        const result = await fetchProspectingStats(companyType, minEmployees, maxEmployees);
         if (result.ok) {
             document.getElementById('dashEligible').textContent = result.eligibleCompanies || 0;
             document.getElementById('dashWithEmail').textContent = result.totalEmails || 0;
@@ -459,11 +461,23 @@ async function loadDashboard(page = 1) {
     try {
         // Determine enriched filter for API call
         const enrichedParam = filterEnriched === '' ? null : filterEnriched === 'true';
-        const maxEmployeesParam = filterEmployees ? parseInt(filterEmployees) : null;
-        console.log('loadDashboard - filterEnriched:', filterEnriched, 'enrichedParam:', enrichedParam, 'maxEmployees:', maxEmployeesParam);
+        
+        // Parse employee range filter
+        let minEmployeesParam = null;
+        let maxEmployeesParam = null;
+        if (filterEmployees) {
+            if (filterEmployees === '500+') {
+                minEmployeesParam = 500;
+            } else {
+                const [min, max] = filterEmployees.split('-').map(Number);
+                minEmployeesParam = min;
+                maxEmployeesParam = max;
+            }
+        }
+        console.log('loadDashboard - filterEnriched:', filterEnriched, 'enrichedParam:', enrichedParam, 'employees:', minEmployeesParam, '-', maxEmployeesParam);
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, maxEmployeesParam, state.dashboardPageSize, skip);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, state.dashboardPageSize, skip);
         console.log('loadDashboard - API returned:', result.total, 'companies');
         showDashboardLoading(true, 'Processing data...', 70);
         
