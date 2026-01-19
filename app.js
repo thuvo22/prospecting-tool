@@ -660,8 +660,10 @@ async function exportDashboardCSV() {
     const filterZip = document.getElementById('filterZip').value;
     const filterEligible = document.getElementById('filterEligible').value;
     const filterEnriched = document.getElementById('filterEnriched').value;
-    const filterEmployees = document.getElementById('filterEmployees').value;
-    const filterReviews = document.getElementById('filterReviews').value;
+    const filterEmployees = document.getElementById('filterEmployees')?.value || '';
+    const filterReviews = document.getElementById('filterReviews')?.value || '';
+    
+    console.log('Export filters:', { filterType, filterEnriched, filterEmployees, filterReviews });
     
     // Show loading state
     const exportBtn = document.getElementById('exportDashboardBtn');
@@ -699,7 +701,9 @@ async function exportDashboardCSV() {
             }
         }
         
+        console.log('Export API call:', { filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, limit: 5000 });
         const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, 5000, 0);
+        console.log('Export API result:', result.total, 'total,', result.companies?.length, 'returned');
         
         if (!result.ok || !result.companies || result.companies.length === 0) {
             showError('No data to export');
