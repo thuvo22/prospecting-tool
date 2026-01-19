@@ -556,7 +556,7 @@ function renderDashboard() {
     const tbody = document.getElementById('dashboardBody');
     
     if (state.dashboardCompanies.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="text-center text-muted py-5"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">No companies match the filters</p></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted py-5"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.3;"></i><p class="mt-3">No companies match the filters</p></td></tr>`;
         document.getElementById('dashResultCount').textContent = 0;
         return;
     }
@@ -579,12 +579,17 @@ function renderDashboard() {
             ? '<span class="badge bg-success">Enriched</span>' 
             : '<span class="badge bg-secondary">Pending</span>';
         
+        const employees = c.employeeCount || '-';
+        const reviews = c.reviewCount || '-';
+        
         return `
             <tr data-place-id="${c.placeId}">
                 <td><strong>${c.companyName}</strong>${c.website ? `<br><a href="${c.website}" target="_blank" class="small text-muted">${c.domain || 'website'}</a>` : ''}</td>
                 <td><small>${c.companyType?.replace('_', ' ') || '-'}</small></td>
                 <td><small>${city}<br>${zip}</small></td>
                 <td>${c.rating ? `<i class="bi bi-star-fill text-warning"></i> ${c.rating}` : '-'}</td>
+                <td><small>${employees}</small></td>
+                <td><small>${reviews}</small></td>
                 <td>${contact?.name || '-'}${contact?.title ? `<br><small class="text-muted">${contact.title}</small>` : ''}</td>
                 <td class="contact-info">${emailContact ? `<a href="mailto:${emailContact.email}" class="email">${emailContact.email}</a>` : '-'}</td>
                 <td class="contact-info">${phone ? `<span class="phone">${phone}</span>` : '-'}</td>
