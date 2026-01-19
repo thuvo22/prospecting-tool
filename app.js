@@ -518,7 +518,7 @@ async function loadDashboard(page = 1) {
             document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
             
             // Load dashboard stats from stats endpoint (filtered by company type and employees)
-            updateDashboardStats(filterType || null, maxEmployeesParam);
+            updateDashboardStats(filterType || null, minEmployeesParam, maxEmployeesParam);
             
             // Show enrich button only when viewing not-enriched companies
             const enrichBtn = document.getElementById('enrichDashboardBtn');
