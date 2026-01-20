@@ -747,8 +747,10 @@ async function exportDashboardCSV() {
             if (!fullName) return { firstName: '', lastName: '' };
             const parts = fullName.trim().split(/\s+/);
             if (parts.length === 1) return { firstName: parts[0], lastName: '' };
-            const firstName = parts[0];
+            let firstName = parts[0];
             const lastName = parts.slice(1).join(' ');
+            // Replace "Website" first name with "Team"
+            if (firstName.toLowerCase() === 'website') firstName = 'Team';
             return { firstName, lastName };
         };
         
