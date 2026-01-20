@@ -737,7 +737,7 @@ async function exportDashboardCSV() {
             return;
         }
         
-        const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
+        const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Employees', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
         
         // Create one row per contact (not per company) to export ALL emails
         const rows = [];
@@ -754,6 +754,7 @@ async function exportDashboardCSV() {
                     (c.address || '').replace(/,/g, ';'),
                     c.rating || '',
                     c.reviewCount || '',
+                    c.employeeCount || '',
                     c.website || '',
                     '',
                     '',
@@ -772,6 +773,7 @@ async function exportDashboardCSV() {
                         (c.address || '').replace(/,/g, ';'),
                         c.rating || '',
                         c.reviewCount || '',
+                        c.employeeCount || '',
                         c.website || '',
                         contact.name || '',
                         contact.title || '',
