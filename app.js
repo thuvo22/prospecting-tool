@@ -737,10 +737,20 @@ async function exportDashboardCSV() {
             return;
         }
         
-        const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Employees', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
+        const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Employees', 'Website', 'First Name', 'Last Name', 'Contact Title', 'Email', 'Phone', 'Source'];
         
         // Helper to capitalize first letter
         const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+        
+        // Helper to split contact name into first and last name
+        const splitName = (fullName) => {
+            if (!fullName) return { firstName: '', lastName: '' };
+            const parts = fullName.trim().split(/\s+/);
+            if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+            const firstName = parts[0];
+            const lastName = parts.slice(1).join(' ');
+            return { firstName, lastName };
+        };
         
         // Create one row per contact (not per company) to export ALL emails
         const rows = [];
@@ -763,12 +773,14 @@ async function exportDashboardCSV() {
                     '',
                     '',
                     '',
+                    '',
                     c.phone || '',
                     c.primarySource || ''
                 ]);
             } else {
                 // One row per contact with email
                 for (const contact of validContacts) {
+                    const { firstName, lastName } = splitName(contact.name);
                     rows.push([
                         c.companyName || '',
                         c.companyType || '',
@@ -779,7 +791,8 @@ async function exportDashboardCSV() {
                         c.reviewCount || '',
                         c.employeeCount || '',
                         c.website || '',
-                        contact.name || '',
+                        firstName,
+                        lastName,
                         contact.title || '',
                         contact.email || '',
                         contact.phone || c.phone || '',
