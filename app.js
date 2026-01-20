@@ -739,17 +739,21 @@ async function exportDashboardCSV() {
         
         const headers = ['Company Name', 'Type', 'City', 'ZIP', 'Address', 'Rating', 'Reviews', 'Employees', 'Website', 'Contact Name', 'Contact Title', 'Email', 'Phone', 'Source'];
         
+        // Helper to capitalize first letter
+        const capitalize = (str) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : '';
+        
         // Create one row per contact (not per company) to export ALL emails
         const rows = [];
         for (const c of companies) {
             const validContacts = c.contacts?.filter(con => con.email && con.emailValid !== false) || [];
+            const cityName = capitalize(c.searchedCities?.[0] || '');
             
             if (validContacts.length === 0) {
                 // Company with no valid email contacts - still include it with empty email
                 rows.push([
                     c.companyName || '',
                     c.companyType || '',
-                    c.searchedCities?.[0] || '',
+                    cityName,
                     c.foundInZip || '',
                     (c.address || '').replace(/,/g, ';'),
                     c.rating || '',
@@ -768,7 +772,7 @@ async function exportDashboardCSV() {
                     rows.push([
                         c.companyName || '',
                         c.companyType || '',
-                        c.searchedCities?.[0] || '',
+                        cityName,
                         c.foundInZip || '',
                         (c.address || '').replace(/,/g, ';'),
                         c.rating || '',
