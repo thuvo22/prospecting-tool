@@ -471,6 +471,8 @@ async function loadDashboard(page = 1) {
         if (filterEmployees) {
             if (filterEmployees === '500+') {
                 minEmployeesParam = 500;
+            } else if (filterEmployees === '100+') {
+                minEmployeesParam = 100;
             } else {
                 const [min, max] = filterEmployees.split('-').map(Number);
                 minEmployeesParam = min;
@@ -681,6 +683,8 @@ async function exportDashboardCSV() {
         if (filterEmployees) {
             if (filterEmployees === '500+') {
                 minEmployeesParam = 500;
+            } else if (filterEmployees === '100+') {
+                minEmployeesParam = 100;
             } else {
                 const [min, max] = filterEmployees.split('-').map(Number);
                 minEmployeesParam = min;
