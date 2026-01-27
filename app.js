@@ -752,13 +752,21 @@ async function exportDashboardCSV() {
         
         // Helper to split contact name into first and last name
         const splitName = (fullName) => {
-            if (!fullName) return { firstName: '', lastName: '' };
+            if (!fullName) return { firstName: 'Team', lastName: '' };
             const parts = fullName.trim().split(/\s+/);
-            if (parts.length === 1) return { firstName: parts[0], lastName: '' };
+            if (parts.length === 0) return { firstName: 'Team', lastName: '' };
+            if (parts.length === 1) {
+                let firstName = parts[0];
+                // Replace invalid first names with "Team"
+                const invalidNames = ['website', 'info', 'contact', 'admin', 'hello', 'support', 'sales', 'office', 'general'];
+                if (!firstName || invalidNames.includes(firstName.toLowerCase())) firstName = 'Team';
+                return { firstName, lastName: '' };
+            }
             let firstName = parts[0];
             const lastName = parts.slice(1).join(' ');
-            // Replace "Website" first name with "Team"
-            if (firstName.toLowerCase() === 'website') firstName = 'Team';
+            // Replace invalid first names with "Team"
+            const invalidNames = ['website', 'info', 'contact', 'admin', 'hello', 'support', 'sales', 'office', 'general'];
+            if (!firstName || invalidNames.includes(firstName.toLowerCase())) firstName = 'Team';
             return { firstName, lastName };
         };
         
