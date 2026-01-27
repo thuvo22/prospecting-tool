@@ -121,17 +121,18 @@ async function getPlaceDetails(placeId) {
     return await apiCall(`/prospecting/place-details/${placeId}`);
 }
 
-async function fetchProspectingStats(companyType = null, minEmployees = null, maxEmployees = null) {
+async function fetchProspectingStats(companyType = null, minEmployees = null, maxEmployees = null, includeUnknownEmployees = false) {
     let url = '/prospecting/prospecting-stats';
     const params = [];
     if (companyType) params.push(`companyType=${encodeURIComponent(companyType)}`);
     if (minEmployees !== null) params.push(`minEmployees=${minEmployees}`);
     if (maxEmployees !== null) params.push(`maxEmployees=${maxEmployees}`);
+    if (includeUnknownEmployees) params.push('includeUnknownEmployees=true');
     if (params.length > 0) url += '?' + params.join('&');
     return await apiCall(url);
 }
 
-async function fetchSavedCompanies(companyType = null, enriched = null, minEmployees = null, maxEmployees = null, minReviews = null, maxReviews = null, limit = 100, skip = 0) {
+async function fetchSavedCompanies(companyType = null, enriched = null, minEmployees = null, maxEmployees = null, minReviews = null, maxReviews = null, limit = 100, skip = 0, includeUnknownEmployees = false) {
     let url = `/prospecting/saved-companies?limit=${limit}&skip=${skip}`;
     if (companyType) url += `&companyType=${encodeURIComponent(companyType)}`;
     if (enriched !== null) url += `&enriched=${enriched}`;
@@ -139,6 +140,7 @@ async function fetchSavedCompanies(companyType = null, enriched = null, minEmplo
     if (maxEmployees !== null) url += `&maxEmployees=${maxEmployees}`;
     if (minReviews !== null) url += `&minReviews=${minReviews}`;
     if (maxReviews !== null) url += `&maxReviews=${maxReviews}`;
+    if (includeUnknownEmployees) url += `&includeUnknownEmployees=true`;
     return await apiCall(url);
 }
 
@@ -153,9 +155,9 @@ async function updateDbStats() {
     } catch (e) { console.error('Failed to fetch stats:', e); }
 }
 
-async function updateDashboardStats(companyType = null, minEmployees = null, maxEmployees = null) {
+async function updateDashboardStats(companyType = null, minEmployees = null, maxEmployees = null, includeUnknownEmployees = false) {
     try {
-        const result = await fetchProspectingStats(companyType, minEmployees, maxEmployees);
+        const result = await fetchProspectingStats(companyType, minEmployees, maxEmployees, includeUnknownEmployees);
         if (result.ok) {
             document.getElementById('dashEligible').textContent = result.eligibleCompanies || 0;
             document.getElementById('dashWithEmail').textContent = result.totalEmails || 0;
@@ -468,15 +470,14 @@ async function loadDashboard(page = 1) {
         // Parse employee range filter
         let minEmployeesParam = null;
         let maxEmployeesParam = null;
+        let includeUnknownEmployees = false;
         if (filterEmployees) {
-            if (filterEmployees === '500+') {
-                minEmployeesParam = 500;
-            } else if (filterEmployees === '100+') {
-                minEmployeesParam = 100;
-            } else {
-                const [min, max] = filterEmployees.split('-').map(Number);
-                minEmployeesParam = min;
-                maxEmployeesParam = max;
+            if (filterEmployees === '50+') {
+                minEmployeesParam = 50;
+                includeUnknownEmployees = true; // Include companies without employee data
+            } else if (filterEmployees === 'below50') {
+                minEmployeesParam = 1;
+                maxEmployeesParam = 49;
             }
         }
         
@@ -492,10 +493,10 @@ async function loadDashboard(page = 1) {
                 maxReviewsParam = max;
             }
         }
-        console.log('loadDashboard - employees:', minEmployeesParam, '-', maxEmployeesParam, 'reviews:', minReviewsParam, '-', maxReviewsParam);
+        console.log('loadDashboard - employees:', minEmployeesParam, '-', maxEmployeesParam, 'includeUnknown:', includeUnknownEmployees, 'reviews:', minReviewsParam, '-', maxReviewsParam);
         
         showDashboardLoading(true, 'Querying API...', 30);
-        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, state.dashboardPageSize, skip);
+        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, state.dashboardPageSize, skip, includeUnknownEmployees);
         console.log('loadDashboard - API returned:', result.total, 'companies');
         showDashboardLoading(true, 'Processing data...', 70);
         
@@ -541,7 +542,7 @@ async function loadDashboard(page = 1) {
         document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
         
         // Load dashboard stats from stats endpoint (filtered by company type and employees)
-        updateDashboardStats(filterType || null, minEmployeesParam, maxEmployeesParam);
+        updateDashboardStats(filterType || null, minEmployeesParam, maxEmployeesParam, includeUnknownEmployees);
         
         // Show enrich button only when viewing not-enriched companies
         const enrichBtn = document.getElementById('enrichDashboardBtn');
@@ -684,15 +685,14 @@ async function exportDashboardCSV() {
         // Parse employee range filter
         let minEmployeesParam = null;
         let maxEmployeesParam = null;
+        let includeUnknownEmployees = false;
         if (filterEmployees) {
-            if (filterEmployees === '500+') {
-                minEmployeesParam = 500;
-            } else if (filterEmployees === '100+') {
-                minEmployeesParam = 100;
-            } else {
-                const [min, max] = filterEmployees.split('-').map(Number);
-                minEmployeesParam = min;
-                maxEmployeesParam = max;
+            if (filterEmployees === '50+') {
+                minEmployeesParam = 50;
+                includeUnknownEmployees = true; // Include companies without employee data
+            } else if (filterEmployees === 'below50') {
+                minEmployeesParam = 1;
+                maxEmployeesParam = 49;
             }
         }
         
@@ -709,8 +709,8 @@ async function exportDashboardCSV() {
             }
         }
         
-        console.log('Export API call:', { filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, limit: 5000 });
-        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, 5000, 0);
+        console.log('Export API call:', { filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, includeUnknownEmployees, minReviewsParam, maxReviewsParam, limit: 5000 });
+        const result = await fetchSavedCompanies(filterType, enrichedParam, minEmployeesParam, maxEmployeesParam, minReviewsParam, maxReviewsParam, 5000, 0, includeUnknownEmployees);
         console.log('Export API result:', result.total, 'total,', result.companies?.length, 'returned');
         
         if (!result.ok || !result.companies || result.companies.length === 0) {
