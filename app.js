@@ -755,9 +755,18 @@ async function exportDashboardCSV() {
             if (!fullName || !fullName.trim()) return { firstName: 'Team', lastName: '' };
             const parts = fullName.trim().split(/\s+/);
             if (parts.length === 0 || !parts[0]) return { firstName: 'Team', lastName: '' };
-            const firstName = parts[0];
+            
+            let firstName = parts[0];
             const lastName = parts.length > 1 ? parts.slice(1).join(' ') : '';
-            return { firstName: firstName || 'Team', lastName };
+            
+            // Replace invalid first names with "Team"
+            const invalidNames = ['website', 'info', 'contact', 'admin', 'hello', 'support', 'sales', 'office', 'general'];
+            if (invalidNames.includes(firstName.toLowerCase())) firstName = 'Team';
+            
+            // Final fallback: if still empty, use "Team"
+            if (!firstName) firstName = 'Team';
+            
+            return { firstName, lastName };
         };
         
         // Create one row per contact (not per company) to export ALL emails
