@@ -499,53 +499,57 @@ async function loadDashboard(page = 1) {
         console.log('loadDashboard - API returned:', result.total, 'companies');
         showDashboardLoading(true, 'Processing data...', 70);
         
-        if (result.ok && result.companies) {
-            let companies = result.companies;
-            state.dashboardTotal = result.total || companies.length;
-            
-            // Apply client-side filters (city, zip, eligibility still need filtering)
-            if (filterCity) {
-                companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
-            }
-            if (filterZip) {
-                companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
-            }
-            
-            // Note: Employee filter is now server-side
-            
-            // Filter by eligibility
-            if (filterEligible === 'eligible') {
-                companies = companies.filter(c => {
-                    const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
-                    const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
-                    return hasValidEmail || hasPhone;
-                });
-            } else if (filterEligible === 'email') {
-                companies = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false));
-            } else if (filterEligible === 'phone') {
-                companies = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone);
-            }
-            
-            state.dashboardCompanies = companies;
-            showDashboardLoading(true, `Rendering ${companies.length} companies...`, 90);
-            renderDashboard();
-            renderPagination();
+        if (!result.ok) {
             showDashboardLoading(false);
-            
-            // Update stats from API response
-            document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
-            
-            // Load dashboard stats from stats endpoint (filtered by company type and employees)
-            updateDashboardStats(filterType || null, minEmployeesParam, maxEmployeesParam);
-            
-            // Show enrich button only when viewing not-enriched companies
-            const enrichBtn = document.getElementById('enrichDashboardBtn');
-            if (filterEnriched === 'false' && companies.length > 0) {
-                enrichBtn.classList.remove('d-none');
-                enrichBtn.innerHTML = `<i class="bi bi-magic me-1"></i> Enrich All (${companies.length})`;
-            } else {
-                enrichBtn.classList.add('d-none');
-            }
+            showError('API returned an error: ' + (result.error || 'Unknown error'));
+            return;
+        }
+        
+        let companies = result.companies || [];
+        state.dashboardTotal = result.total || companies.length;
+        
+        // Apply client-side filters (city, zip, eligibility still need filtering)
+        if (filterCity) {
+            companies = companies.filter(c => c.searchedCities?.includes(filterCity.toLowerCase()));
+        }
+        if (filterZip) {
+            companies = companies.filter(c => c.foundInZip === filterZip || c.address?.includes(filterZip));
+        }
+        
+        // Note: Employee filter is now server-side
+        
+        // Filter by eligibility
+        if (filterEligible === 'eligible') {
+            companies = companies.filter(c => {
+                const hasValidEmail = c.contacts?.some(con => con.email && con.emailValid !== false);
+                const hasPhone = c.contacts?.some(con => con.phone) || c.phone;
+                return hasValidEmail || hasPhone;
+            });
+        } else if (filterEligible === 'email') {
+            companies = companies.filter(c => c.contacts?.some(con => con.email && con.emailValid !== false));
+        } else if (filterEligible === 'phone') {
+            companies = companies.filter(c => c.contacts?.some(con => con.phone) || c.phone);
+        }
+        
+        state.dashboardCompanies = companies;
+        showDashboardLoading(true, `Rendering ${companies.length} companies...`, 90);
+        renderDashboard();
+        renderPagination();
+        showDashboardLoading(false);
+        
+        // Update stats from API response
+        document.getElementById('dashTotalCompanies').textContent = state.dashboardTotal;
+        
+        // Load dashboard stats from stats endpoint (filtered by company type and employees)
+        updateDashboardStats(filterType || null, minEmployeesParam, maxEmployeesParam);
+        
+        // Show enrich button only when viewing not-enriched companies
+        const enrichBtn = document.getElementById('enrichDashboardBtn');
+        if (filterEnriched === 'false' && companies.length > 0) {
+            enrichBtn.classList.remove('d-none');
+            enrichBtn.innerHTML = `<i class="bi bi-magic me-1"></i> Enrich All (${companies.length})`;
+        } else {
+            enrichBtn.classList.add('d-none');
         }
     } catch (err) {
         console.error('Dashboard load error:', err);
