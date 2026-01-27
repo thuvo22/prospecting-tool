@@ -476,7 +476,7 @@ async function loadDashboard(page = 1) {
                 minEmployeesParam = 50;
                 includeUnknownEmployees = true; // Include companies without employee data
             } else if (filterEmployees === 'below50') {
-                minEmployeesParam = 1;
+                // Only set max, don't set min - this allows 0 and null values
                 maxEmployeesParam = 49;
             }
         }
@@ -691,7 +691,7 @@ async function exportDashboardCSV() {
                 minEmployeesParam = 50;
                 includeUnknownEmployees = true; // Include companies without employee data
             } else if (filterEmployees === 'below50') {
-                minEmployeesParam = 1;
+                // Only set max, don't set min - this allows 0 and null values
                 maxEmployeesParam = 49;
             }
         }
